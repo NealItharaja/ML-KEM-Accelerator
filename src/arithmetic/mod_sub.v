@@ -1,13 +1,21 @@
 // Modular Subtraction
+// Assumptions: Inputs are already modulo reduced, e.g.  0 ≤ A < q &  0 ≤ B < q, thus making  0 ≤ result < q
 
 module
     input [11:0] A,
     input [11:0] B,
-    output [11:0] result
+    output reg [11:0] result
     
-    wire [12:0] sum;
+    wire [12:0] diff;
     paramter [11:0] q = 12'd3329;
 
-    assign sum = A - B;
-    assign result = sum & (q - 1);
+    assign diff = A - B;
+    
+    always @(*) begin
+        if (diff >= q) begin
+            result = diff - q;
+        end else begin
+            result = diff
+        end
+    end
 endmodule
