@@ -1,5 +1,6 @@
 // Montgomery reduction
 // T will be a product from mod_mult
+// Assumption: 0 <= T < qR
 module montgomery(
     input [23:0] T,
     output reg [11:0] t
