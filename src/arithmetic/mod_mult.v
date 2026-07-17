@@ -1,5 +1,4 @@
 // Modular Multiplication
-// Using same R = 4096 (2^12)
 module mod_mult(
     input [11:0] A,
     input [11:0] B,
