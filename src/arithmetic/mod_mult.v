@@ -5,7 +5,7 @@ module mod_mult(
     output [11:0] result
 );
 
-    parameter [11:0] R_Sq_mod = 1353;
+    parameter [11:0] R_Sq_mod = 1353; // Uses R^2 mod q constant value
     
     wire [23:0] product;
     wire [11:0] A_Prime;
