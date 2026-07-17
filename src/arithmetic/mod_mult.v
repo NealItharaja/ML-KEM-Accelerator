@@ -5,15 +5,32 @@ module mod_mult(
     output [11:0] result
 );
 
-    parameter [11:0] N = 3329;
-    parameter [11:0] N_Prime = 3327;
+    parameter [11:0] R_Sq_mod = 1353;
     
     wire [23:0] product;
+    wire [11:0] A_Prime;
+    wire [11:0] B_Prime;
+    wire [11:0] C;
 
     assign product = A * B;
 
     montgomery A_Prime (
-        .T(product),
+        .T(A * R_Sq_mod),
+        .t(A_Prime)
+    )
+
+    montgomery B_Prime (
+        .T(B * R_Sq_mod),
+        .t(B_Prime)
+    )
+
+    montgomery C (
+        .T(A_Prime * B_Prime),
+        .t(C)
+    )
+
+    montgomery result (
+        .T(C),
         .t(result)
     )
 endmodule
