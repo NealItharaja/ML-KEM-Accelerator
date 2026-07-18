@@ -13,7 +13,7 @@ module montgomery(
     wire [24:0] inter;
     wire [12:0] t_inter;
 
-    assign m = (T * N_Prime);
+    assign m = (T * N_Prime) & 12'hFFF;
     assign inter = T + (m*N);
     assign t_inter = inter >> 12;
 

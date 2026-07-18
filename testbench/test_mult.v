@@ -1,8 +1,7 @@
-// Modular Multiplication test
-
+// Test for Modular Multiplication
 `timescale 1ns/1ps
 
-module mod_pipeline_tb;
+module mod_mult_tb;
     //------------------------------------------
     // Inputs
     //------------------------------------------
@@ -10,71 +9,74 @@ module mod_pipeline_tb;
     reg [11:0] B;
 
     //------------------------------------------
-    // Internal Wires
+    // Output
     //------------------------------------------
-    wire [11:0] A_Prime;
-    wire [11:0] B_Prime;
-    wire [11:0] Product_Prime;
-    wire [11:0] Result;
+    wire [11:0] Product;
 
     //------------------------------------------
-    // Expected Value
+    // Test Variables
     //------------------------------------------
     integer expected;
+    integer product;
+    integer m;
+    integer inter;
     integer i;
 
     //------------------------------------------
     // DUT
     //------------------------------------------
 
-    to_mont ToMontA(
+    mod_mult DUT(
         .A(A),
-        .A_Prime(A_Prime)
-    );
-
-    to_mont ToMontB(
-        .A(B),
-        .A_Prime(B_Prime)
-    );
-
-    mod_mult Multiplier(
-        .A(A_Prime),
-        .B(B_Prime),
-        .result(Product_Prime)
-    );
-
-    from_mont FromMont(
-        .C(Product_Prime),
-        .result(Result)
+        .B(B),
+        .result(Product)
     );
 
     //------------------------------------------
-    // Compute Expected Result
+    // Check Result
     //------------------------------------------
 
     task check_result;
     begin
 
-        expected = (A * B) % 3329;
+        //--------------------------------------
+        // Software Montgomery Reduction
+        //--------------------------------------
+
+        product = A * B;
+
+        m = (product * 3327) & 12'hFFF;;
+        inter = (product + m * 3329) / 4096;
+
+        if(inter >= 3329)
+            expected = inter - 3329;
+        else
+            expected = inter;
 
         #1;
 
-        if(Result !== expected[11:0]) begin
+        if(Product !== expected[11:0]) begin
 
+            $display("");
+            $display("======================================");
             $display("FAIL");
-            $display("A          = %d", A);
-            $display("B          = %d", B);
-            $display("Expected   = %d", expected);
-            $display("Got        = %d", Result);
-            $display("A'         = %d", A_Prime);
-            $display("B'         = %d", B_Prime);
-            $display("Product'   = %d", Product_Prime);
-            $display("-------------------------------------");
+            $display("======================================");
+            $display("A                = %d", A);
+            $display("B                = %d", B);
+            $display("Raw Product      = %d", product);
+            $display("m                = %d", m);
+            $display("Intermediate      = %d", inter);
+            $display("");
+            $display("Expected Product = %d", expected);
+            $display("Actual Product   = %d", Product);
+            $display("======================================");
+            $display("");
 
         end
         else begin
 
-            $display("PASS: A=%4d  B=%4d  Result=%4d", A, B, Result);
+            $display("PASS: A=%4d  B=%4d  Product=%4d",
+                     A,B,Product);
 
         end
 
@@ -88,51 +90,50 @@ module mod_pipeline_tb;
     initial begin
 
         $display("");
-        $display("=======================================");
-        $display(" Integrated Montgomery Multiplier Test ");
-        $display("=======================================");
+        $display("======================================");
+        $display(" Montgomery Modular Multiplier Test");
+        $display("======================================");
 
         //----------------------------------
-        // Edge Cases
+        // Small values
         //----------------------------------
 
-        A = 0;      B = 0;      check_result();
-        A = 0;      B = 1;      check_result();
-        A = 1;      B = 0;      check_result();
-        A = 1;      B = 1;      check_result();
-        A = 1;      B = 2;      check_result();
-        A = 2;      B = 3;      check_result();
+        A=0;      B=0;      check_result();
+        A=1;      B=1;      check_result();
+        A=2;      B=3;      check_result();
+        A=10;     B=20;     check_result();
 
         //----------------------------------
-        // Boundary Values
+        // Boundary values
         //----------------------------------
 
-        A = 3328;   B = 1;      check_result();
-        A = 1;      B = 3328;   check_result();
-        A = 3328;   B = 3328;   check_result();
-        A = 3328;   B = 3327;   check_result();
-        A = 3327;   B = 3327;   check_result();
+        A=3328;   B=1;      check_result();
+        A=1;      B=3328;   check_result();
+        A=3328;   B=3328;   check_result();
+        A=3328;   B=3327;   check_result();
+        A=3327;   B=3327;   check_result();
 
         //----------------------------------
-        // Typical ML-KEM Values
+        // Known Montgomery values
         //----------------------------------
 
-        A = 100;    B = 200;    check_result();
-        A = 500;    B = 600;    check_result();
-        A = 1000;   B = 2000;   check_result();
-        A = 2048;   B = 2048;   check_result();
-        A = 2500;   B = 3000;   check_result();
-        A = 3072;   B = 1024;   check_result();
+        A=1464;   B=2997;   check_result();
+        A=1573;   B=3280;   check_result();
+        A=883;    B=1139;   check_result();
+        A=1515;   B=2137;   check_result();
+        A=929;    B=774;    check_result();
+        A=2675;   B=2606;   check_result();
+        A=2469;   B=2638;   check_result();
 
         //----------------------------------
-        // Random Testing
+        // Random testing
         //----------------------------------
 
         $display("");
         $display("Beginning Random Tests...");
         $display("");
 
-        for(i = 0; i < 1000; i = i + 1) begin
+        for(i=0;i<1000;i=i+1) begin
 
             A = $random % 3329;
             if(A < 0)
@@ -147,9 +148,9 @@ module mod_pipeline_tb;
         end
 
         $display("");
-        $display("=======================================");
-        $display(" Simulation Finished");
-        $display("=======================================");
+        $display("======================================");
+        $display("Simulation Finished");
+        $display("======================================");
 
         $finish;
     end
