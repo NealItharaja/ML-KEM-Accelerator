@@ -5,7 +5,7 @@ module mod_mult(
     output [11:0] result
 );
     
-    wire [23:0] product;
+    wire [31:0] product;
     
     assign product = A * B;
 

@@ -6,7 +6,7 @@ module to_mont(
 
     parameter [11:0] R_Sq_mod = 1353; // Uses R^2 mod q constant value
     
-    wire [23:0] product;
+    wire [31:0] product;
     
     assign product = A * R_Sq_mod;
 
