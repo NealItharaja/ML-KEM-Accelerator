@@ -2,7 +2,6 @@
 `timescale 1ns/1ps
 
 module to_mont_tb;
-
     reg  [11:0] A;
     wire [11:0] A_Prime;
 
@@ -32,26 +31,43 @@ module to_mont_tb;
         else
             expected = inter;
 
+        // Normalize result into Z_3329
+        if(expected < 0)
+            expected = expected + 3329;
+
         #1;
 
         if(A_Prime !== expected[11:0]) begin
+
             $display("FAIL");
-            $display("A        = %d",A);
-            $display("Expected = %d",expected);
-            $display("Got      = %d",A_Prime);
+            $display("A        = %d", A);
+            $display("Product  = %d", product);
+            $display("m        = %d", m);
+            $display("inter    = %d", inter);
+            $display("Expected = %d", expected);
+            $display("Got      = %d", A_Prime);
             $display("---------------------------");
+
         end
         else begin
-            $display("PASS: A=%d  A'=%d",A,A_Prime);
+
+            $display("PASS: A=%d  A'=%d", A, A_Prime);
+
         end
 
     end
     endtask
 
+
     initial begin
 
         $display("Beginning To Montgomery Tests");
         $display("-----------------------------");
+
+
+        //--------------------------------
+        // Basic tests
+        //--------------------------------
 
         A=0;      check_result();
         A=1;      check_result();
@@ -61,18 +77,26 @@ module to_mont_tb;
         A=2048;   check_result();
         A=3328;   check_result();
 
+
+        //--------------------------------
+        // Random tests
+        //--------------------------------
+
         for(i=0;i<1000;i=i+1) begin
+
             A = $random % 3329;
+
             if(A < 0)
                 A = -A;
+
             check_result();
+
         end
+
 
         $display("-----------------------------");
         $display("Simulation Finished");
 
         $finish;
-
     end
-
 endmodule
