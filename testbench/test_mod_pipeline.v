@@ -55,31 +55,27 @@ module mod_pipeline_tb;
     task check_result;
     begin
 
-        expected = (A * B) % 3329;
+    expected = A * B;
+    expected = expected % 3329;
 
-        #1;
+    #1;
 
-        if(Result !== expected[11:0]) begin
-
-            $display("FAIL");
-            $display("A          = %d", A);
-            $display("B          = %d", B);
-            $display("Expected   = %d", expected);
-            $display("Got        = %d", Result);
-            $display("A'         = %d", A_Prime);
-            $display("B'         = %d", B_Prime);
-            $display("Product'   = %d", Product_Prime);
-            $display("-------------------------------------");
-
-        end
-        else begin
-
-            $display("PASS: A=%4d  B=%4d  Result=%4d", A, B, Result);
-
-        end
-
+    if(Result !== expected[11:0]) begin
+        $display("FAIL");
+        $display("A          = %d", A);
+        $display("B          = %d", B);
+        $display("Expected   = %d", expected);
+        $display("Got        = %d", Result);
+        $display("A'         = %d", A_Prime);
+        $display("B'         = %d", B_Prime);
+        $display("Product'   = %d", Product_Prime);
+        $display("-------------------------------------");
     end
-    endtask
+    else begin
+        $display("PASS: A=%4d  B=%4d  Result=%4d", A, B, Result);
+    end
+end
+endtask
 
     //------------------------------------------
     // Test Sequence
@@ -133,17 +129,9 @@ module mod_pipeline_tb;
         $display("");
 
         for(i = 0; i < 1000; i = i + 1) begin
-
-            A = $random % 3329;
-            if(A < 0)
-                A = -A;
-
-            B = $random % 3329;
-            if(B < 0)
-                B = -B;
-
+            A = $urandom_range(0,3328);
+            B = $urandom_range(0,3328);
             check_result();
-
         end
 
         $display("");
