@@ -1,0 +1,16 @@
+{
+    "DESIGN_NAME": "mod_add",
+
+    "VERILOG_FILES": [
+        "dir::./src/arithmetic/mod_add.v"
+    ],
+
+    "FP_SIZING": "absolute",
+
+    "DIE_AREA": [
+        0,
+        0,
+        60,
+        60
+    ]
+}
