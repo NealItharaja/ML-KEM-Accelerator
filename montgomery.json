@@ -1,8 +1,8 @@
 {
-    "DESIGN_NAME": "mod_add",
+    "DESIGN_NAME": "montgomery",
 
     "VERILOG_FILES": [
-        "dir::../../src/arithmetic/mod_add.v"
+        "dir::./src/arithmetic/montgomery.v"
     ],
 
     "FP_SIZING": "absolute",
@@ -10,7 +10,7 @@
     "DIE_AREA": [
         0,
         0,
-        60,
-        60
+        65,
+        65
     ]
 }
