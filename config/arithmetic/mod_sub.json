@@ -1,8 +1,8 @@
 {
-    "DESIGN_NAME": "mod_add",
+    "DESIGN_NAME": "mod_sub",
 
     "VERILOG_FILES": [
-        "dir::../../src/arithmetic/mod_add.v"
+        "dir::../../src/arithmetic/mod_sub.v"
     ],
 
     "FP_SIZING": "absolute",
