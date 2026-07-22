@@ -7,10 +7,14 @@
 
     "FP_SIZING": "absolute",
 
+    "CLOCK_PORT": "clk",
+
+    "CLOCK_PERIOD": 30,
+
     "DIE_AREA": [
         0,
         0,
-        65,
-        65
+        120,
+        120
     ]
 }
