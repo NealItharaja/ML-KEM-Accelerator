@@ -11,7 +11,7 @@ module coeff_ram(
 
     always @(posedge clk) begin
         if (we)
-            mem[addr] <= din'
+            mem[addr] <= din;
         dout <= mem[addr];
     end 
 endmodule
