@@ -1,0 +1,21 @@
+{
+    "DESIGN_NAME": "from_montgomery",
+
+    "VERILOG_FILES": [
+        "dir::./src/arithmetic/from_montgomery.v",
+        "dir::./src/arithmetic/montgomery.v"
+    ],
+
+    "FP_SIZING": "absolute",
+
+    "CLOCK_PORT": "clk",
+
+    "CLOCK_PERIOD": 30,
+
+    "DIE_AREA": [
+        0,
+        0,
+        110,
+        110
+    ]
+}

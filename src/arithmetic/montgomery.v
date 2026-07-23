@@ -3,7 +3,7 @@
 // Assumption: 0 <= T < qR where R is 2^16 (or 65536)
 module montgomery(
     input [31:0] T,
-    input clk, // Dummy clock port
+    input clk, //Dummy clock port
     output reg [11:0] t
 );
 

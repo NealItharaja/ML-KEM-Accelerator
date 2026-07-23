@@ -1,6 +1,7 @@
 // Turns input into Montogomery domain
-module to_mont(
+module to_montgomery(
     input [11:0] A,
+    input clk, //Dummy clock
     output [11:0] A_Prime
 );
 
@@ -11,6 +12,7 @@ module to_mont(
     assign product = A * R_Sq_mod;
 
     montgomery APrime (
+        .clk(clk), //Instantiating dummy clock
         .T(product),
         .t(A_Prime)
     );
