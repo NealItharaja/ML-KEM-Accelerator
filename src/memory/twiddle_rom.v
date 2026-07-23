@@ -1,0 +1,17 @@
+// Module for reading official Kyber twiddle factors
+module twiddle_rom(
+    input clk,
+    input [7:0] addr,
+    output reg [11:0] data
+    );
+
+    reg [11:0] rom [0:255];
+
+    initial begin
+        $readmemh("twiddle.mem", rom);
+    end
+
+    always @(posedge clk) begin
+        data <= rom[addr];
+    end
+endmodule
