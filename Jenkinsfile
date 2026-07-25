@@ -24,6 +24,7 @@ pipeline {
                 for test in "${tests[@]}"
                 do
                     echo "Running $test"
+                    rm -rf test.out
                     iverilog \
                         -o build/$test.out \
                         src/arithmetic/*.v \
