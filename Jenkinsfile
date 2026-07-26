@@ -13,21 +13,13 @@ pipeline {
         stage('Run Testbenches') {
             steps {
                 sh '''
-                #!/bin/bash
                 mkdir -p build logs
 
-                tests=(
-                    mod_add
-                    mod_mult
-                    montgomery
-                    to_mont
-                    from_mont
-                )
-
-                for test in "${tests[@]}"
+                for test in $tests
                 do
                     echo "Running $test"
-                    rm -rf test.out
+                    rm -f build/$test.out
+                    
                     iverilog \
                         -o build/$test.out \
                         src/arithmetic/*.v \
