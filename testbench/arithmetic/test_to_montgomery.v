@@ -12,7 +12,7 @@ module to_mont_tb;
     integer i;
 
     // DUT
-    to_mont DUT (
+    to_montgomery DUT (
         .A(A),
         .A_Prime(A_Prime)
     );
