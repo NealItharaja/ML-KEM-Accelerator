@@ -15,7 +15,7 @@ pipeline {
                 sh '''
                 mkdir -p build logs
 
-                tests="add to_montgomery" 
+                tests="add mod_pipeline" 
 
                 for test in $tests
                 do
