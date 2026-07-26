@@ -13,6 +13,7 @@ pipeline {
         stage('Run Testbenches') {
             steps {
                 sh '''
+                #!/bin/bash
                 mkdir -p build logs
 
                 tests=(
