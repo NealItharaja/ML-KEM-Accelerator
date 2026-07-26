@@ -15,7 +15,7 @@ pipeline {
                 sh '''
                 mkdir -p build logs
 
-                tests="add to_montgomery" 
+                tests="add to_mont" 
 
                 for test in $tests
                 do
