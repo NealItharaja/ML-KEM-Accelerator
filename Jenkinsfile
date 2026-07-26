@@ -15,6 +15,8 @@ pipeline {
                 sh '''
                 mkdir -p build logs
 
+                tests="mod_add mod_mult montgomery to_mont from_mont"
+
                 for test in $tests
                 do
                     echo "Running $test"
