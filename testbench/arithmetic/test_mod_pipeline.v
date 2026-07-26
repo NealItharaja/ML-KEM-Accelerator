@@ -36,13 +36,13 @@ module mod_pipeline_tb;
     // DUT
     //------------------------------------------
 
-    to_mont ToMontA(
+    to_montgomery ToMontA(
         .A(A),
         .A_Prime(A_Prime)
     );
 
 
-    to_mont ToMontB(
+    to_montgomery ToMontB(
         .A(B),
         .A_Prime(B_Prime)
     );
@@ -55,7 +55,7 @@ module mod_pipeline_tb;
     );
 
 
-    from_mont FromMont(
+    from_montgomery FromMont(
         .C(Product_Prime),
         .result(Result)
     );
