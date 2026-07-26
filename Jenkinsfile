@@ -1,4 +1,4 @@
-/* pipeline {
+/pipeline {
     agent {
         label 'linux'
     }
@@ -56,28 +56,6 @@
 
         failure {
             echo 'One or more hardware tests failed.'
-        }
-    }
-} */
-
-pipeline {
-    agent {
-        label 'linux'
-    }
-
-    options {
-        skipDefaultCheckout(true)
-    }
-
-    stages {
-        stage('Check Git') {
-            steps {
-                sh '''
-                echo "PATH=$PATH"
-                which git
-                git --version
-                '''
-            }
         }
     }
 }
