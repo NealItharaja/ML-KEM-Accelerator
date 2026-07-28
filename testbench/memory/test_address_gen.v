@@ -119,7 +119,6 @@ initial begin
             $display("NTT ADDRESS GENERATION COMPLETE!");
             $display("Total Butterflies Simulated: %0d", total_butterflies);
             $display("========================================");
-            break;
         end
     end
 
