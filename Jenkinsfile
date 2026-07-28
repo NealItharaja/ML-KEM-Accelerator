@@ -3,11 +3,19 @@ pipeline {
         label 'linux'
     }
 
+    environment {
+        DESIGN_DIR = "src/memory"
+        TB_DIR = "testbench/memory"
+
+        TESTS = "coeff_ram twiddle_rom address_gen"
+    }
+
     triggers {
         githubPush()
     }
 
     stages {
+
         stage('Checkout') {
             steps {
                 checkout scm
@@ -19,23 +27,24 @@ pipeline {
                 sh '''
                 mkdir -p build logs
 
-                tests="coeff_ram" 
-
-                for test in $tests
+                for test in $TESTS
                 do
+                    echo "================================="
                     echo "Running $test"
+                    echo "================================="
+
                     rm -f build/$test.out
 
                     iverilog \
                         -o build/$test.out \
-                        src/memory/*.v \
-                        testbench/memory/test_${test}.v
+                        ${DESIGN_DIR}/*.v \
+                        ${TB_DIR}/${test}_tb.v
 
                     vvp build/$test.out > logs/${test}.log
 
                     if grep -q "FAIL" logs/${test}.log
                     then
-                        echo "Test $test failed."
+                        echo "$test FAILED"
                         exit 1
                     fi
                 done
@@ -46,15 +55,17 @@ pipeline {
 
     post {
         always {
-            archiveArtifacts artifacts: 'logs/*.log', fingerprint: true, allowEmptyArchive: true
+            archiveArtifacts artifacts: 'logs/*.log',
+                             fingerprint: true,
+                             allowEmptyArchive: true
         }
 
         success {
-            echo 'All hardware tests passed.'
+            echo "All tests passed."
         }
 
         failure {
-            echo 'One or more hardware tests failed.'
+            echo "One or more tests failed."
         }
     }
 }

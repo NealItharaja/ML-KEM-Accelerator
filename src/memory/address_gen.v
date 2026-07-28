@@ -49,7 +49,7 @@ module address_gen(
                 group <= group + 1;
             end
             else begin
-                roup <= 0;
+                group <= 0;
 
                 if (stage < 7) begin
                     stage <= stage + 1;
