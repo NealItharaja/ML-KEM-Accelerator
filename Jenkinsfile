@@ -38,7 +38,7 @@ pipeline {
                     iverilog \
                         -o build/$test.out \
                         ${DESIGN_DIR}/*.v \
-                        ${TB_DIR}/$test_{test}.v
+                        ${TB_DIR}/test_${test}.v
 
                     vvp build/$test.out > logs/${test}.log
 
