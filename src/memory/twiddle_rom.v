@@ -1,7 +1,7 @@
 // Module for reading official Kyber twiddle factors
 module twiddle_rom(
     input clk,
-    input [7:0] addr,
+    input [6:0] addr,
     output reg [11:0] data
     );
 

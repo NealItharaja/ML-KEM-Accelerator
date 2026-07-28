@@ -30,6 +30,7 @@ initial begin
     $readmemh("src/memory/twiddle.mem", expected);
 
     @(posedge clk);
+    #1
 
     for(i = 0; i < 128; i = i + 1) begin
 
