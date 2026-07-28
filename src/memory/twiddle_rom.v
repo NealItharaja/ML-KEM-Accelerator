@@ -5,10 +5,10 @@ module twiddle_rom(
     output reg [11:0] data
     );
 
-    reg [11:0] rom [0:255];
+    reg [11:0] rom [0:127];
 
     initial begin
-        $readmemh("twiddle.mem", rom);
+        $readmemh("src/memory/twiddle.mem", rom);
     end
 
     always @(posedge clk) begin
