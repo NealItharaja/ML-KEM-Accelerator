@@ -19,7 +19,7 @@ pipeline {
                 sh '''
                 mkdir -p build logs
 
-                tests="add mod_pipeline" 
+                tests="coeff_ram" 
 
                 for test in $tests
                 do
@@ -28,8 +28,8 @@ pipeline {
 
                     iverilog \
                         -o build/$test.out \
-                        src/arithmetic/*.v \
-                        testbench/arithmetic/test_${test}.v
+                        src/memory/*.v \
+                        testbench/memory/test_${test}.v
 
                     vvp build/$test.out > logs/${test}.log
 
