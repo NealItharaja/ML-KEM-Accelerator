@@ -11,7 +11,7 @@ module address_gen(
     output reg valid
     );
 
-    reg [2:0] stage = 0;
+    reg [2:0] stage;
     reg [7:0] j, group;
 
     wire [7:0] d;
@@ -37,30 +37,35 @@ module address_gen(
         end
         else begin
             state <= next_state;
+
+            if (start) begin
+                done <= 0;
+            end
         
-        if (state == CHECK) begin
-            if (j < d - 1) begin
-                j <= j + 1;
-            end
-            else begin
-                j <= 0;
-
-            if (group < groups_per_stage - 1) begin
-                group <= group + 1;
-            end
-            else begin
-                group <= 0;
-
-                if (stage < 7) begin
-                    stage <= stage + 1;
+            if (state == CHECK) begin
+                if (j < d - 1) begin
+                    j <= j + 1;
                 end
                 else begin
-                    done <= 1;
+                    j <= 0;
+
+                    if (group < groups_per_stage - 1) begin
+                        group <= group + 1;
+                    end
+                    else begin
+                        group <= 0;
+
+                        if (stage < 7) begin
+                            stage <= stage + 1;
+                        end
+                        else begin
+                            done <= 1;
+                        end
+                    end
                 end
             end
         end
     end
-end
 
     always @(*) begin
         next_state = state;
