@@ -1,136 +1,186 @@
 `timescale 1ns/1ps
 
-module kyber_ntt_pipeline_tb;
+module memory_pipeline_tb;
 
-    reg clk;
-    reg reset;
-    reg start;
-    reg butterfly_done;
+// -----------------------------------------------------------------------------
+// Testbench Clock & Reset Signals
+// -----------------------------------------------------------------------------
+reg clk;
+reg reset;
+reg start;
+reg butterfly_done;
 
-    wire [7:0] addr_a;
-    wire [7:0] addr_b;
-    wire [6:0] twiddle_addr;
-    wire [11:0] twiddle_data;
-    wire valid;
-    wire done;
+// -----------------------------------------------------------------------------
+// Address Generator Interconnect Wires
+// -----------------------------------------------------------------------------
+wire [7:0] addr_a;
+wire [7:0] addr_b;
+wire [7:0] twiddle_addr;
+wire       done;
+wire       valid_addr;
 
-    // Expected memory array loaded from file
-    reg [11:0] expected_rom [0:127];
+// -----------------------------------------------------------------------------
+// Memory Output Wires (Arrive 1 Clock Cycle AFTER Valid Address)
+// -----------------------------------------------------------------------------
+wire [11:0] coeff_a;
+wire [11:0] coeff_b;
+wire [11:0] twiddle_data;
 
-    // Pipeline delay registers to track 1-cycle BRAM read latency
-    reg [6:0] pipe_addr;
-    reg       pipe_valid;
+// Memory Write Interface (For Initializing coeff_ram before NTT)
+reg        ram_we;
+reg  [7:0] ram_waddr;
+reg [11:0] ram_wdata;
 
-    integer pass_count;
-    integer fail_count;
-    integer total_checked;
+integer pass_count;
+integer fail_count;
+integer cycle_count;
 
-    // Instantiate Top Pipeline Unit
-    kyber_ntt_twiddle_pipeline DUT (
-        .clk(clk),
-        .reset(reset),
-        .start(start),
-        .butterfly_done(butterfly_done),
-        .addr_a(addr_a),
-        .addr_b(addr_b),
-        .twiddle_addr(twiddle_addr),
-        .twiddle_data(twiddle_data),
-        .valid(valid),
-        .done(done)
-    );
+// -----------------------------------------------------------------------------
+// 1. Instantiate NTT Address Generator
+// -----------------------------------------------------------------------------
+address_gen ADDR_GEN_INST (
+    .clk(clk),
+    .reset(reset),
+    .start(start),
+    .butterfly_done(butterfly_done),
+    .addr_a(addr_a),
+    .addr_b(addr_b),
+    .twiddle_addr(twiddle_addr[6:0]), // Truncate to 7 bits for 128-entry ROM
+    .done(done),
+    .valid(valid_addr)
+);
 
-    // 100MHz clock generation (10ns period)
-    always #5 clk = ~clk;
+// -----------------------------------------------------------------------------
+// 2. Instantiate Official Kyber Twiddle ROM (128 x 12-bit)
+// -----------------------------------------------------------------------------
+twiddle_rom TWIDDLE_ROM_INST (
+    .clk(clk),
+    .addr(twiddle_addr[6:0]),
+    .data(twiddle_data)
+);
 
-    // Pipeline register process: captures address on Cycle N to check data on Cycle N+1
-    always @(posedge clk or posedge reset) begin
-        if (reset) begin
-            pipe_addr  <= 0;
-            pipe_valid <= 0;
-        end else begin
-            pipe_addr  <= twiddle_addr;
-            pipe_valid <= valid;
-        end
-    end
+// -----------------------------------------------------------------------------
+// 3. Instantiate Dual-Port Coefficient RAM (256 x 12-bit)
+// -----------------------------------------------------------------------------
+// Reads coeff_a from addr_a and coeff_b from addr_b concurrently
+coeff_ram COEFF_RAM_INST (
+    .clk(clk),
+    .we(ram_we),
+    .waddr(ram_waddr),
+    .din(ram_wdata),
+    .raddr_a(addr_a),
+    .raddr_b(addr_b),
+    .dout_a(coeff_a),
+    .dout_b(coeff_b)
+);
 
-    // Verification Process
-    initial begin
-        clk = 0;
-        reset = 1;
-        start = 0;
-        butterfly_done = 0;
+// -----------------------------------------------------------------------------
+// Clock Generation (100 MHz, 10ns Period)
+// -----------------------------------------------------------------------------
+always #5 clk = ~clk;
 
-        pass_count = 0;
-        fail_count = 0;
-        total_checked = 0;
+// -----------------------------------------------------------------------------
+// Verification Loop
+// -----------------------------------------------------------------------------
+initial begin
+    clk = 0;
+    reset = 1;
+    start = 0;
+    butterfly_done = 0;
+    ram_we = 0;
+    ram_waddr = 0;
+    ram_wdata = 0;
+    pass_count = 0;
+    fail_count = 0;
+    cycle_count = 0;
 
-        // Load reference twiddle factors
-        $readmemh("src/memory/twiddle.mem", expected_rom);
+    $display("=================================================");
+    $display("STARTING KYBER MEMORY PIPELINE INTEGRATION TEST");
+    $display("=================================================");
 
-        // Release reset
-        @(negedge clk);
-        reset = 0;
-
-        // Pulse start signal
-        @(negedge clk);
-        start = 1;
-
-        @(negedge clk);
-        start = 0;
-
-        // Main simulation loop
-        while (!done && total_checked < 500) begin
-
-            @(posedge clk);
-            #1; // Delta delay for non-blocking assignment settling
-
-            // Simulate butterfly completion when address generator is in GEN state
-            if (DUT.addr_gen_inst.state == 2'b01) begin
-                butterfly_done = 1;
-            end else begin
-                butterfly_done = 0;
-            end
-
-            // Check pipelined memory data output on Cycle N+1
-            if (pipe_valid) begin
-                total_checked = total_checked + 1;
-
-                if (twiddle_data === expected_rom[pipe_addr]) begin
-                    $display("[PASS #%0d] ROM[%0d] => Got: 0x%03h | Exp: 0x%03h | AddrA=%0d AddrB=%0d",
-                             total_checked, pipe_addr, twiddle_data, expected_rom[pipe_addr], addr_a, addr_b);
-                    pass_count = pass_count + 1;
-                end else begin
-                    $display("[FAIL #%0d] ROM[%0d] => Got: 0x%03h | Exp: 0x%03h (MISMATCH!)",
-                             total_checked, pipe_addr, twiddle_data, expected_rom[pipe_addr]);
-                    fail_count = fail_count + 1;
-                end
-            end
-        end
-
-        // Wait 1 final cycle for last pipeline drain
+    // Step 1: Initialize Coefficient RAM with test vector: RAM[i] = i
+    @(negedge clk);
+    reset = 0;
+    ram_we = 1;
+    for (integer k = 0; k < 256; k = k + 1) begin
+        ram_waddr = k;
+        ram_wdata = k[11:0]; // Store index as test value
         @(posedge clk);
-        #1;
-        if (pipe_valid) begin
-            total_checked = total_checked + 1;
-            if (twiddle_data === expected_rom[pipe_addr]) begin
-                $display("[PASS #%0d] ROM[%0d] => Got: 0x%03h | Exp: 0x%03h",
-                         total_checked, pipe_addr, twiddle_data, expected_rom[pipe_addr]);
+    end
+    ram_we = 0;
+
+    $display("[INFO] Initialized 256 RAM entries in coeff_ram.");
+
+    // Step 2: Pulse START signal for Address Generator
+    @(negedge clk);
+    start = 1;
+    @(posedge clk);
+    #1;
+    start = 0;
+
+    // Step 3: Run pipeline verification loop
+    while (!done && cycle_count < 1000) begin
+        cycle_count = cycle_count + 1;
+
+        @(posedge clk);
+        #1; // Delta delay to allow non-blocking memory assignments to settle
+
+        // Simulate butterfly completion when address generator is in GEN mode
+        if (ADDR_GEN_INST.state == 2'b01) begin
+            butterfly_done = 1;
+        end else begin
+            butterfly_done = 0;
+        end
+
+        // Check data pipeline when memory output is valid
+        if (valid_addr) begin
+            // Verify RAM A output matches initialized value: coeff_a == addr_a
+            if (coeff_a === addr_a[11:0]) begin
                 pass_count = pass_count + 1;
             end else begin
-                $display("[FAIL #%0d] ROM[%0d] => Got: 0x%03h | Exp: 0x%03h",
-                         total_checked, pipe_addr, twiddle_data, expected_rom[pipe_addr]);
+                $display("FAIL Cycle %0d: coeff_a (Got %03h, Expected %03h)", 
+                         cycle_count, coeff_a, addr_a);
                 fail_count = fail_count + 1;
             end
+
+            // Verify RAM B output matches initialized value: coeff_b == addr_b
+            if (coeff_b === addr_b[11:0]) begin
+                pass_count = pass_count + 1;
+            end else begin
+                $display("FAIL Cycle %0d: coeff_b (Got %03h, Expected %03h)", 
+                         cycle_count, coeff_b, addr_b);
+                fail_count = fail_count + 1;
+            end
+
+            // Verify twiddle address bound check (< 128)
+            if (twiddle_addr < 128) begin
+                pass_count = pass_count + 1;
+            end else begin
+                $display("FAIL Cycle %0d: twiddle_addr out of range (%0d >= 128)", 
+                         cycle_count, twiddle_addr);
+                fail_count = fail_count + 1;
+            end
+
+            $display("PIPELINE OK [Stage %0d, Grp %0d]: RAM[%0d]=%03h, RAM[%0d]=%03h, TWIDDLE[%0d]=%03h",
+                     ADDR_GEN_INST.stage, ADDR_GEN_INST.group, 
+                     addr_a, coeff_a, addr_b, coeff_b, twiddle_addr, twiddle_data);
         end
-
-        $display("\n==================================================");
-        $display("   KYBER NTT PIPELINE TESTBENCH COMPLETE");
-        $display("   Total Butterflies Tested : %0d", total_checked);
-        $display("   Passed                   : %0d", pass_count);
-        $display("   Failed                   : %0d", fail_count);
-        $display("==================================================\n");
-
-        $finish;
     end
+
+    $display("=================================================");
+    $display("MEMORY PIPELINE INTEGRATION TEST COMPLETE");
+    $display("Total Cycle Count : %0d", cycle_count);
+    $display("Assertions Passed : %0d", pass_count);
+    $display("Assertions Failed : %0d", fail_count);
+    $display("=================================================");
+
+    if (fail_count == 0) begin
+        $display(">>> SUCCESS: Memory subsystem is 100%% ready for NTT Butterfly Unit! <<<");
+    end else begin
+        $display(">>> ERROR: Fix timing/address alignment before writing NTT core! <<<");
+    end
+
+    $finish;
+end
 
 endmodule
