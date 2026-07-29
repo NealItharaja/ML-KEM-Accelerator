@@ -23,7 +23,7 @@ module butterfly(
 
     always @(posedge clk) begin
         A_reg <= a;
-        T_reg <= T_wire;
+        T_reg <= T;
     end
 
     mod_add add (
