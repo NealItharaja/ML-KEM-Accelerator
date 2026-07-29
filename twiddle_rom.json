@@ -9,12 +9,12 @@
 
     "CLOCK_PORT": "clk",
 
-    "CLOCK_PERIOD": 30,
+    "CLOCK_PERIOD": 5,
 
     "DIE_AREA": [
         0,
         0,
-        600,
-        600
+        90,
+        90
     ]
 }
