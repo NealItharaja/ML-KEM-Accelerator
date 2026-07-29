@@ -5,7 +5,7 @@ module coeff_ram(
     input [7:0] addr,
     input [11:0] din,
     output reg [11:0] dout
-);
+    );
     
     reg [11:0] mem [0:255];
 
