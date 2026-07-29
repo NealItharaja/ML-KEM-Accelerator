@@ -4,10 +4,10 @@ pipeline {
     }
 
     environment {
-        DESIGN_DIR = "src/memory"
-        TB_DIR = "testbench/memory"
+        DESIGN_DIR = "src/ntt"
+        TB_DIR = "testbench/ntt"
 
-        TESTS = "memory_pipeline coeff_ram address_gen twiddle_rom"
+        TESTS = "butterfly"
     }
 
     triggers {
@@ -37,7 +37,7 @@ pipeline {
 
                     iverilog \
                         -o build/$test.out \
-                        ${DESIGN_DIR}/*.v macros/*.v \
+                        ${DESIGN_DIR}/*.v \
                         ${TB_DIR}/test_${test}.v
 
                     vvp build/$test.out > logs/${test}.log
