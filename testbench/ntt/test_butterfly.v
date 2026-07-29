@@ -1,6 +1,7 @@
 `timescale 1ns/1ps
 
 module butterfly_tb;
+
     reg clk;
     reg [11:0] a;
     reg [11:0] b;
@@ -20,6 +21,8 @@ module butterfly_tb;
 
     always #5 clk = ~clk;
 
+    // Wider signals so additions don't overflow
+    reg [12:0] expected_sum;
     reg [11:0] expected_t;
     reg [11:0] expected_a;
     reg [11:0] expected_b;
@@ -36,32 +39,43 @@ module butterfly_tb;
             b = B;
             twiddle = W;
 
-            #20;
-            $display("A_reg = %d", DUT.A_reg);
-            $display("T_reg = %d", DUT.T_reg);
-            $display("T     = %d", DUT.T);
+            @(posedge clk);
+            @(posedge clk);
+            #1;
 
-            // Uses your already-verified modules
             expected_t = DUT.T;
-            expected_a = DUT.a + expected_t;
-            if(expected_a >= 3329)
-                expected_a = expected_a - 3329;
 
-            if(DUT.a >= expected_t)
+            // Correct modular addition
+            expected_sum = {1'b0, DUT.a} + {1'b0, expected_t};
+
+            if (expected_sum >= 13'd3329)
+                expected_a = expected_sum - 13'd3329;
+            else
+                expected_a = expected_sum[11:0];
+
+            // Correct modular subtraction
+            if (DUT.a >= expected_t)
                 expected_b = DUT.a - expected_t;
             else
-                expected_b = DUT.a + 3329 - expected_t;
+                expected_b = DUT.a + 12'd3329 - expected_t;
 
-            if(a_out == expected_a && b_out == expected_b) begin
-                $display("PASS  A=%4d  B=%4d  Tw=%4d  ->  A'=%4d  B'=%4d",
-                    A,B,W,a_out,b_out);
+            if ((a_out == expected_a) && (b_out == expected_b)) begin
+                $display("PASS");
+                $display(" A=%4d B=%4d Tw=%4d", A, B, W);
+                $display(" T=%4d", expected_t);
+                $display(" A'=%4d", a_out);
+                $display(" B'=%4d", b_out);
+                $display("------------------------------");
             end
             else begin
                 errors = errors + 1;
+
                 $display("FAIL");
-                $display(" A=%d B=%d Tw=%d",A,B,W);
-                $display(" Expected A=%d Got=%d",expected_a,a_out);
-                $display(" Expected B=%d Got=%d",expected_b,b_out);
+                $display(" A=%4d B=%4d Tw=%4d", A, B, W);
+                $display(" T=%4d", expected_t);
+                $display(" Expected A=%4d Got=%4d", expected_a, a_out);
+                $display(" Expected B=%4d Got=%4d", expected_b, b_out);
+                $display("------------------------------");
             end
 
         end
@@ -87,7 +101,7 @@ module butterfly_tb;
 
         $display("===============================");
 
-        if(errors == 0)
+        if (errors == 0)
             $display("ALL TESTS PASSED");
         else
             $display("%0d TEST(S) FAILED", errors);
