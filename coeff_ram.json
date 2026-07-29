@@ -8,8 +8,12 @@
     "MACROS": {
         "sky130_sram_1kbyte_1rw1r_32x256_8": {
             "instances": {
-                "SRAM": {
-                    "location": [70, 70],
+                "bank0": {
+                    "location": [60, 70],
+                    "orientation": "N"
+                },
+                "bank1": {
+                    "location": [610, 70],
                     "orientation": "N"
                 }
             },
@@ -42,7 +46,7 @@
 
     "FP_SIZING": "absolute",
 
-    "DIE_AREA": [0, 0, 650, 560],
+    "DIE_AREA": [0, 0, 1150, 540],
 
     "CLOCK_PORT": "clk",
 

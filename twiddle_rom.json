@@ -1,0 +1,20 @@
+{
+    "DESIGN_NAME": "twiddle_rom",
+
+    "VERILOG_FILES": [
+        "dir::./src/memory/twiddle_rom.v"
+    ],
+
+    "FP_SIZING": "absolute",
+
+    "CLOCK_PORT": "clk",
+
+    "CLOCK_PERIOD": 30,
+
+    "DIE_AREA": [
+        0,
+        0,
+        700,
+        700
+    ]
+}

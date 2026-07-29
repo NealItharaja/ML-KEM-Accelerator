@@ -1,94 +1,110 @@
 // Integrated Memory Pipeline Testbench for Kyber NTT
-// Verifies address_gen + twiddle_rom + coeff_ram working in tandem before Butterfly Unit integration.
 
 `timescale 1ns / 1ps
 
 module ntt_memory_pipeline_tb;
 
+    localparam integer L = 4;   // must match the AG PIPE_LATENCY below
+
     reg clk;
     reg reset;
     reg start;
-    reg butterfly_done;
 
-    // Address Generator outputs
-    wire [7:0] addr_a;
-    wire [7:0] addr_b;
-    wire [7:0] twiddle_addr;
-    wire done;
-    wire valid;
+    // Address generator streams
+    wire        rd_en;
+    wire [7:0]  rd_addr_a, rd_addr_b;
+    wire [6:0]  twiddle_addr;
+    wire        wr_en;
+    wire [7:0]  wr_addr_a, wr_addr_b;
+    wire        done;
 
-    // RAM control signals
-    reg we_a;
-    reg we_b;
-    reg [7:0] pre_addr_a;
-    reg [7:0] pre_addr_b;
-    reg [11:0] din_a;
-    reg [11:0] din_b;
-
-    wire [7:0] ram_addr_a;
-    wire [7:0] ram_addr_b;
-
-    // Registered memory outputs (Inputs to future Butterfly Unit)
-    wire [11:0] dout_a;
-    wire [11:0] dout_b;
+    // Memory / ROM data
+    wire [11:0] rd_data_a, rd_data_b;
     wire [11:0] twiddle_factor;
 
-    // Verification Counters
+    // Verification counters and golden data
     integer pass_count = 0;
     integer fail_count = 0;
-    integer total_butterflies = 0;
+    integer rd_count   = 0;
+    integer wr_count   = 0;
+    integer cyc        = 0;
     integer i;
+    integer t;
+    integer d;
+    reg     finished;
+    reg [7:0]  idx;
+    reg [11:0] got;
 
-    // Golden array to hold expected twiddle ROM values
     reg [11:0] expected_twiddle [0:127];
+    reg [11:0] exp [0:255];
 
     // =========================================================================
     // MODULE INSTANTIATIONS
     // =========================================================================
 
-    // 1. Address Generator
-    address_gen AG (
+    address_gen #(.PIPE_LATENCY(L)) AG (
         .clk(clk),
         .reset(reset),
         .start(start),
-        .butterfly_done(butterfly_done),
-        .addr_a(addr_a),
-        .addr_b(addr_b),
+        .rd_en(rd_en),
+        .rd_addr_a(rd_addr_a),
+        .rd_addr_b(rd_addr_b),
         .twiddle_addr(twiddle_addr),
-        .done(done),
-        .valid(valid)
+        .wr_en(wr_en),
+        .wr_addr_a(wr_addr_a),
+        .wr_addr_b(wr_addr_b),
+        .done(done)
     );
 
-    // Mux RAM addresses: Connect pre-load generator or address_gen pipeline
-    assign ram_addr_a = (we_a) ? pre_addr_a : addr_a;
-    assign ram_addr_b = (we_b) ? pre_addr_b : addr_b;
+    // Identity "butterfly": delay read data by PIPE_LATENCY-1 cycles so it lines
+    // up with the generator's delayed write strobe and addresses.
+    reg [11:0] a_dly [0:L-2];
+    reg [11:0] b_dly [0:L-2];
+    always @(posedge clk) begin
+        a_dly[0] <= rd_data_a;
+        b_dly[0] <= rd_data_b;
+        for (d = 1; d <= L-2; d = d + 1) begin
+            a_dly[d] <= a_dly[d-1];
+            b_dly[d] <= b_dly[d-1];
+        end
+    end
+    wire [11:0] wr_data_a = a_dly[L-2];
+    wire [11:0] wr_data_b = b_dly[L-2];
 
-    // 2. Coefficient RAM A (Even / Operand A Memory)
-    coeff_ram RAM_A (
+    // Single 2-bank RAM (its internal crossbar handles operand routing).
+    coeff_ram RAM (
         .clk(clk),
-        .we(we_a),
-        .addr(ram_addr_a),
-        .din(din_a),
-        .dout(dout_a)
+        .rd_en(rd_en),
+        .rd_addr_a(rd_addr_a),
+        .rd_addr_b(rd_addr_b),
+        .rd_data_a(rd_data_a),
+        .rd_data_b(rd_data_b),
+        .wr_en(wr_en),
+        .wr_addr_a(wr_addr_a),
+        .wr_addr_b(wr_addr_b),
+        .wr_data_a(wr_data_a),
+        .wr_data_b(wr_data_b)
     );
 
-    // 3. Coefficient RAM B (Odd / Operand B Memory)
-    coeff_ram RAM_B (
-        .clk(clk),
-        .we(we_b),
-        .addr(ram_addr_b),
-        .din(din_b),
-        .dout(dout_b)
-    );
-
-    // 4. Twiddle Factor ROM
     twiddle_rom TW_ROM (
         .clk(clk),
-        .addr(twiddle_addr[6:0]),
+        .addr(twiddle_addr),
         .data(twiddle_factor)
     );
 
-    // Clock Generation: 100 MHz (10ns period)
+    // 1-cycle-delayed copies of the read stream, aligned with the returned
+    // read data / twiddle factor (which have 1-cycle latency).
+    reg        rd_en_d;
+    reg [7:0]  rd_a_d, rd_b_d;
+    reg [6:0]  tw_d;
+    always @(posedge clk) begin
+        rd_en_d <= rd_en;
+        rd_a_d  <= rd_addr_a;
+        rd_b_d  <= rd_addr_b;
+        tw_d    <= twiddle_addr;
+    end
+
+    // Clock: 100 MHz (10ns period)
     always #5 clk = ~clk;
 
     // =========================================================================
@@ -99,102 +115,120 @@ module ntt_memory_pipeline_tb;
         clk = 0;
         reset = 1;
         start = 0;
-        butterfly_done = 0;
-        we_a = 0;
-        we_b = 0;
-        pre_addr_a = 0;
-        pre_addr_b = 0;
-        din_a = 0;
-        din_b = 0;
 
-        // Load expected hex values into golden array for assertions
+        // Golden twiddle ROM contents
         $readmemh("src/memory/twiddle.mem", expected_twiddle);
 
-        // -------------------------------------------------------------
-        // STEP 1: Pre-load 256 test polynomial coefficients into RAM_A & RAM_B
-        // -------------------------------------------------------------
+        // -----------------------------------------------------------------
+        // STEP 1: Preload 256 coefficients (poly[i] = i*5 + 1) into the banks
+        // -----------------------------------------------------------------
         $display("=================================================");
-        $display("Step 1: Pre-loading 256 coefficients into RAM_A & RAM_B");
+        $display("Step 1: Preloading 256 coefficients into coeff_ram");
         $display("=================================================");
         for (i = 0; i < 256; i = i + 1) begin
-            @(negedge clk);
-            we_a = 1;
-            we_b = 1;
-            pre_addr_a = i;
-            pre_addr_b = i;
-            // Pre-load known test polynomial: poly[i] = i * 5 + 1
-            din_a = i * 12'h005 + 12'h001; 
-            din_b = i * 12'h005 + 12'h001; 
+            idx    = i[7:0];
+            exp[i] = idx * 12'h005 + 12'h001;
+            if (^idx) RAM.bank1[i >> 1] = exp[i];   // odd parity  -> bank1
+            else      RAM.bank0[i >> 1] = exp[i];   // even parity -> bank0
         end
-        @(negedge clk);
-        we_a = 0;
-        we_b = 0;
 
-        // -------------------------------------------------------------
-        // STEP 2: Release Reset & Start Address Generator
-        // -------------------------------------------------------------
+        // -----------------------------------------------------------------
+        // STEP 2: Release reset & start the generator/pipeline
+        // -----------------------------------------------------------------
         $display("=================================================");
-        $display("Step 2: Starting Address Generator & Memory Pipeline");
+        $display("Step 2: Starting address generator & memory pipeline");
         $display("=================================================");
+        @(posedge clk); #1;
         reset = 0;
-        @(negedge clk);
+        @(posedge clk); #1;
         start = 1;
-        @(negedge clk);
+        @(posedge clk); #1;
         start = 0;
 
-        // -------------------------------------------------------------
-        // STEP 3: Monitor Memory Pipeline outputs when valid == 1
-        // -------------------------------------------------------------
-        while (!done && total_butterflies < 2500) begin
-            @(posedge clk);
-            #1; // Wait 1ns for registered RAM/ROM outputs to update
-
-            if (valid) begin
-                total_butterflies = total_butterflies + 1;
-
-                // Test Assertion 1: Verify Twiddle Factor read from ROM
-                if (twiddle_factor === expected_twiddle[twiddle_addr[6:0]]) begin
+        // -----------------------------------------------------------------
+        // STEP 3: Stream and check until done (check-then-advance so the first
+        // read cycle is not skipped)
+        // -----------------------------------------------------------------
+        finished = 0;
+        while (!finished && cyc < 6000) begin
+            if (rd_en) begin
+                rd_count = rd_count + 1;
+                if ((^rd_addr_a) !== (^rd_addr_b)) begin
                     pass_count = pass_count + 1;
                 end else begin
-                    $display("FAIL [Twiddle ROM]: twiddle_addr=%0d Expected=%03h Got=%03h",
-                             twiddle_addr[6:0], expected_twiddle[twiddle_addr[6:0]], twiddle_factor);
+                    $display("FAIL: read pair (%0d,%0d) share a bank", rd_addr_a, rd_addr_b);
+                    fail_count = fail_count + 1;
+                end
+            end
+
+            if (wr_en) wr_count = wr_count + 1;
+
+            // One cycle after a read was issued, its data/twiddle are valid.
+            if (rd_en_d) begin
+                if (rd_data_a === exp[rd_a_d]) pass_count = pass_count + 1;
+                else begin
+                    $display("FAIL [coeff_ram A]: addr=%0d Expected=%03h Got=%03h",
+                             rd_a_d, exp[rd_a_d], rd_data_a);
                     fail_count = fail_count + 1;
                 end
 
-                // Test Assertion 2: Verify RAM_A coefficient read
-                if (dout_a === (addr_a * 12'h005 + 12'h001)) begin
-                    pass_count = pass_count + 1;
-                end else begin
-                    $display("FAIL [coeff_ram A]: addr_a=%0d Expected=%03h Got=%03h",
-                             addr_a, (addr_a * 12'h005 + 12'h001), dout_a);
+                if (rd_data_b === exp[rd_b_d]) pass_count = pass_count + 1;
+                else begin
+                    $display("FAIL [coeff_ram B]: addr=%0d Expected=%03h Got=%03h",
+                             rd_b_d, exp[rd_b_d], rd_data_b);
                     fail_count = fail_count + 1;
                 end
 
-                // Test Assertion 3: Verify RAM_B coefficient read
-                if (dout_b === (addr_b * 12'h005 + 12'h001)) begin
-                    pass_count = pass_count + 1;
-                end else begin
-                    $display("FAIL [coeff_ram B]: addr_b=%0d Expected=%03h Got=%03h",
-                             addr_b, (addr_b * 12'h005 + 12'h001), dout_b);
+                if (twiddle_factor === expected_twiddle[tw_d]) pass_count = pass_count + 1;
+                else begin
+                    $display("FAIL [twiddle ROM]: addr=%0d Expected=%03h Got=%03h",
+                             tw_d, expected_twiddle[tw_d], twiddle_factor);
                     fail_count = fail_count + 1;
                 end
+            end
 
-                // Pulse butterfly_done on falling clock edge to simulate butterfly unit finishing
-                butterfly_done = 1;
-                @(negedge clk);
-                butterfly_done = 0;
+            if (done) finished = 1;
+            else begin
+                @(posedge clk); #1;
+                cyc = cyc + 1;
             end
         end
 
-        // -------------------------------------------------------------
-        // STEP 4: Print Test Summary
-        // -------------------------------------------------------------
+        // Drain remaining write-backs
+        for (t = 0; t < L + 3; t = t + 1) begin
+            @(posedge clk); #1;
+            if (wr_en) wr_count = wr_count + 1;
+        end
+
+        // -----------------------------------------------------------------
+        // STEP 4: Memory must be unchanged after an identity pass
+        // -----------------------------------------------------------------
+        for (i = 0; i < 256; i = i + 1) begin
+            idx = i[7:0];
+            got = (^idx) ? RAM.bank1[i >> 1] : RAM.bank0[i >> 1];
+            if (got === exp[i]) begin
+                pass_count = pass_count + 1;
+            end else begin
+                $display("FAIL [mem@%0d]: Expected=%03h Got=%03h", i, exp[i], got);
+                fail_count = fail_count + 1;
+            end
+        end
+
+        // -----------------------------------------------------------------
+        // STEP 5: Summary
+        // -----------------------------------------------------------------
         $display("=================================================");
         $display("INTEGRATED PIPELINE TEST SUMMARY");
-        $display("Total Butterflies Simulated: %0d", total_butterflies);
-        $display("Passed Checks: %0d", pass_count);
-        $display("Failed Checks: %0d", fail_count);
+        $display("Read pairs  = %0d (expected 1024)", rd_count);
+        $display("Write pairs = %0d (expected 1024)", wr_count);
+        $display("Passed checks = %0d", pass_count);
+        $display("Failed checks = %0d", fail_count);
         $display("=================================================");
+
+        if (rd_count == 1024 && wr_count == 1024 && fail_count == 0)
+            $display("TEST PASSED");
+        else
+            $display("TEST FAILED");
 
         $finish;
     end
