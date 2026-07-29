@@ -20,9 +20,9 @@ module address_gen(
     assign d = 1 << stage;
     assign groups_per_stage = 1 << (8 - (stage + 1));
 
-    parameter IDLE  = 2'b00;
-    parameter GEN   = 2'b01;
-    parameter WAIT  = 2'b10;
+    parameter IDLE = 2'b00;
+    parameter GEN = 2'b01;
+    parameter WAIT = 2'b10;
     parameter CHECK = 2'b11;;
 
     reg [1:0] state, next_state;
