@@ -1,5 +1,5 @@
 // SRAM version
-module coeff_ram(
+module coeff_ram_sram(
     `ifdef USE_POWER_PINS
         inout vccd1,
         inout vssd1,
