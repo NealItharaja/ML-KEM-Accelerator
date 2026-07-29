@@ -8,25 +8,33 @@ module butterfly(
     output [11:0] b_out
     );
 
-    reg [11:0] T;
+    wire [11:0] T;
 
-    always @(posedge) begin
-        mod_mult product (
+    reg [11:0] T_reg;
+    reg [11:0] A_reg;
+
+    assign A = a;
+
+    mod_mult product (
         .A(b),
         .B(twiddle),
         .result(T)
-        );
+    );
 
-        mod_add add (
-            .A(a),
-            .B(T),
-            .result(a_out)
-        );
-
-        mod_sub sub (
-            .A(a),
-            .B(T),
-            .result(b_out)
-        );
+    always @(posedge clk) begin
+        A_reg <= a;
+        T_reg <= T_wire;
     end
+
+    mod_add add (
+        .A(A_reg),
+        .B(T_reg),
+        .result(a_out)
+    );
+
+    mod_sub sub (
+        .A(A_reg),
+        .B(T_reg),
+        .result(b_out)
+    );
 endmodule
