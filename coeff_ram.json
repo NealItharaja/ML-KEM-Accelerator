@@ -2,27 +2,49 @@
     "DESIGN_NAME": "coeff_ram",
 
     "VERILOG_FILES": [
-        "dir::./src/memory/coeff_ram_sram.v",
-        "dir::./macros/sky130_sram.v"
+        "dir::./src/memory/coeff_ram_sram.v"
     ],
 
-    "EXTRA_LEFS": [
-        "/home/nealitharaja/.volare/volare/sky130/versions/8afc8346a57fe1ab7934ba5a6056ea8b43078e71/sky130A/libs.ref/sky130_sram_macros/lef/sky130_sram_1kbyte_1rw1r_32x256_8.lef"
-    ],
+    "MACROS": {
+        "sky130_sram_1kbyte_1rw1r_32x256_8": {
+            "instances": {
+                "SRAM": {
+                    "location": [70, 70],
+                    "orientation": "N"
+                }
+            },
+            "gds": [
+                "/home/nealitharaja/.volare/volare/sky130/versions/8afc8346a57fe1ab7934ba5a6056ea8b43078e71/sky130A/libs.ref/sky130_sram_macros/gds/sky130_sram_1kbyte_1rw1r_32x256_8.gds"
+            ],
+            "lef": [
+                "/home/nealitharaja/.volare/volare/sky130/versions/8afc8346a57fe1ab7934ba5a6056ea8b43078e71/sky130A/libs.ref/sky130_sram_macros/lef/sky130_sram_1kbyte_1rw1r_32x256_8.lef"
+            ],
+            "vh": [
+                "dir::./macros/sky130_sram.v"
+            ],
+            "lib": {
+                "*": [
+                    "dir::./macros/sky130_sram_1kbyte_1rw1r_32x256_8_TT_1p8V_25C.lib"
+                ]
+            }
+        }
+    },
 
-    "EXTRA_LIBS": [
-        "/home/nealitharaja/.volare/volare/sky130/versions/8afc8346a57fe1ab7934ba5a6056ea8b43078e71/sky130A/libs.ref/sky130_sram_macros/lib/sky130_sram_1kbyte_1rw1r_32x256_8_TT_1p8V_25C.lib"
-    ],
+    "VDD_NETS": ["vccd1"],
+    
+    "GND_NETS": ["vssd1"],
 
-    "EXTRA_GDS_FILES": [
-        "/home/nealitharaja/.volare/volare/sky130/versions/8afc8346a57fe1ab7934ba5a6056ea8b43078e71/sky130A/libs.ref/sky130_sram_macros/gds/sky130_sram_1kbyte_1rw1r_32x256_8.gds"
+    "PRIMARY_GDSII_STREAMOUT_TOOL": "klayout",
+
+    "MAGIC_DRC_MAGLEFS": [
+        "/home/nealitharaja/.volare/volare/sky130/versions/8afc8346a57fe1ab7934ba5a6056ea8b43078e71/sky130A/libs.ref/sky130_sram_macros/maglef/sky130_sram_1kbyte_1rw1r_32x256_8.mag"
     ],
 
     "FP_SIZING": "absolute",
 
-    "CLOCK_PORT": "clk",
-    
-    "CLOCK_PERIOD": 20,
+    "DIE_AREA": [0, 0, 650, 560],
 
-    "DIE_AREA": [0, 0, 400, 400]
+    "CLOCK_PORT": "clk",
+
+    "CLOCK_PERIOD": 20
 }

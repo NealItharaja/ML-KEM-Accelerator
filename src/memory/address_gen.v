@@ -6,7 +6,7 @@ module address_gen(
     input butterfly_done,
     output reg [7:0] addr_a,
     output reg [7:0] addr_b,
-    output reg [7:0] twiddle_addr,
+    output reg [6:0] twiddle_addr,
     output reg done,
     output reg valid
     );
@@ -23,7 +23,7 @@ module address_gen(
     parameter IDLE = 2'b00;
     parameter GEN = 2'b01;
     parameter WAIT = 2'b10;
-    parameter CHECK = 2'b11;;
+    parameter CHECK = 2'b11;
 
     reg [1:0] state, next_state;
 
