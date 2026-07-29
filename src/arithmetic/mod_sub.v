@@ -6,17 +6,14 @@ module mod_sub(
     input [11:0] B,
     output reg [11:0] result
     );
-    
-    wire [12:0] diff;
-    parameter [11:0] q = 12'd3329;
 
-    assign diff = A - B;
+    parameter [11:0] q = 12'd3329;
     
     always @(*) begin
-        if (diff >= q) begin
-            result = diff - q;
+        if (A >= B) begin
+            result = A - B;
         end else begin
-            result = diff;
+            result = A + q - B;
         end
     end
 endmodule
