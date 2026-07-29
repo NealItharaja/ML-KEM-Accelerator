@@ -7,7 +7,7 @@ pipeline {
         DESIGN_DIR = "src/memory"
         TB_DIR = "testbench/memory"
 
-        TESTS = "memory_pipeline"
+        TESTS = "memory_pipeline coeff_ram address_gen twiddle_rom"
     }
 
     triggers {
