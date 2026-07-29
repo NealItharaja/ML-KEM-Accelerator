@@ -37,6 +37,9 @@ module butterfly_tb;
             twiddle = W;
 
             #20;
+            $display("A_reg = %d", DUT.A_reg);
+            $display("T_reg = %d", DUT.T_reg);
+            $display("T     = %d", DUT.T);
 
             // Uses your already-verified modules
             expected_t = DUT.T;
