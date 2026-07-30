@@ -7,7 +7,7 @@ pipeline {
         DESIGN_DIR = "src/ntt"
         TB_DIR = "testbench/ntt"
 
-        TESTS = "ntt256"
+        TESTS = "ntt"
     }
 
     triggers {
