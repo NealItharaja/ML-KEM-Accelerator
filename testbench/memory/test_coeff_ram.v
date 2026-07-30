@@ -65,7 +65,7 @@ initial begin
 
     for(i=0;i<4;i=i+1) begin
 
-        @(posedge clk);
+        @(negedge clk);
 
         wr_en = 1;
 
@@ -83,7 +83,7 @@ initial begin
 
     end
 
-    @(posedge clk);
+    @(negedge clk);
     wr_en = 0;
 
     //---------------------------------------------------------
@@ -98,6 +98,8 @@ initial begin
     rd_en = 1;
 
     for(i=0;i<4;i=i+1) begin
+
+        @(negedge clk);
 
         rd_addr_a = 2*i;
         rd_addr_b = 2*i+1;
@@ -148,6 +150,54 @@ initial begin
 
     for(i=0;i<8;i=i+1)
         $display("bank1[%0d] = %0d",i,DUT.bank1[i]);
+
+    $display("");
+
+    //---------------------------------------------------------
+    // Cross-stage consistency test
+    //
+    // Write addresses 0..3 as STAGE-0 pairs (0,1),(2,3), then read them
+    // back as STAGE-1 pairs (0,2),(1,3). A correct memory maps each address
+    // to the same bank no matter how it is paired, so the values must match.
+    // LSB-only banking stores 2 and 3 in swapped banks vs. parity banking,
+    // so this read comes back wrong under LSB banking.
+    //---------------------------------------------------------
+
+    $display("--------------------------------");
+    $display("Cross-stage consistency...");
+    $display("--------------------------------");
+
+    // Write as stage-0 pairs
+    @(negedge clk);
+    wr_en = 1;
+    wr_addr_a = 0; wr_addr_b = 1; wr_data_a = 500; wr_data_b = 501;
+
+    @(negedge clk);
+    wr_addr_a = 2; wr_addr_b = 3; wr_data_a = 502; wr_data_b = 503;
+
+    @(negedge clk);
+    wr_en = 0;
+
+    // Read as stage-1 pairs
+    rd_en = 1;
+
+    @(negedge clk);
+    rd_addr_a = 0; rd_addr_b = 2;
+    @(posedge clk);
+    #1;
+    $display("READ (0,2) -> (%0d,%0d)", rd_data_a, rd_data_b);
+    if(rd_data_a != 500) begin errors = errors + 1; $display("FAIL: (0,2) A"); end
+    if(rd_data_b != 502) begin errors = errors + 1; $display("FAIL: (0,2) B"); end
+
+    @(negedge clk);
+    rd_addr_a = 1; rd_addr_b = 3;
+    @(posedge clk);
+    #1;
+    $display("READ (1,3) -> (%0d,%0d)", rd_data_a, rd_data_b);
+    if(rd_data_a != 501) begin errors = errors + 1; $display("FAIL: (1,3) A"); end
+    if(rd_data_b != 503) begin errors = errors + 1; $display("FAIL: (1,3) B"); end
+
+    rd_en = 0;
 
     $display("");
 
