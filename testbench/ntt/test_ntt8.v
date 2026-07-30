@@ -1,6 +1,6 @@
 `timescale 1ns/1ps
 
-module test_ntt8_debug;
+module test_ntt8;
 
 reg clk;
 reg reset;
@@ -40,74 +40,88 @@ initial begin
     #20;
     reset = 0;
 
-    //----------------------------------
+    //--------------------------------------------------
     // Load coefficients
-    //----------------------------------
+    //--------------------------------------------------
 
     $display("--------------------------------");
-    $display("Loading coefficients");
+    $display("Loading memory");
     $display("--------------------------------");
+
+    load = 1;
 
     for(i=0;i<8;i=i+1) begin
-
-        @(posedge clk);
-
-        load = 1;
         load_addr = i;
         load_data = i+1;
+        @(posedge clk);
 
+        $display("WRITE addr=%0d data=%0d",
+            load_addr,
+            load_data);
     end
 
-    @(posedge clk);
     load = 0;
 
-    //----------------------------------
+    //--------------------------------------------------
     // Start NTT
-    //----------------------------------
+    //--------------------------------------------------
 
     @(posedge clk);
-    start = 1;
 
+    start = 1;
     @(posedge clk);
     start = 0;
 
-    //----------------------------------
-    // Debug every cycle
-    //----------------------------------
+    $display("--------------------------------");
+    $display("Running NTT");
+    $display("--------------------------------");
+
+    //--------------------------------------------------
+    // Print every cycle
+    //--------------------------------------------------
 
     while(!done) begin
 
         @(posedge clk);
 
-        $display("--------------------------------");
-        $display("Stage      = %0d",DUT.addresses.stage);
-        $display("Group      = %0d",DUT.addresses.group);
-        $display("j          = %0d",DUT.addresses.j);
+        $display("");
 
-        $display("Read A     = %0d",DUT.rd_addr_a);
-        $display("Read B     = %0d",DUT.rd_addr_b);
+        $display("Cycle");
 
-        $display("Coeff A    = %0d",DUT.coeff_a);
-        $display("Coeff B    = %0d",DUT.coeff_b);
+        $display(" Stage      = %0d", DUT.addresses.stage);
+        $display(" Group      = %0d", DUT.addresses.group);
+        $display(" j          = %0d", DUT.addresses.j);
 
-        $display("TwiddleAdr = %0d",DUT.twiddle_addr);
-        $display("Twiddle    = %0d",DUT.twiddle);
+        $display("");
 
-        $display("Butterfly A= %0d",DUT.butterfly_a);
-        $display("Butterfly B= %0d",DUT.butterfly_b);
+        $display(" ReadA Addr = %0d", DUT.ram_rd_addr_a);
+        $display(" ReadB Addr = %0d", DUT.ram_rd_addr_b);
 
-        $display("Write A    = %0d",DUT.wr_addr_a);
-        $display("Write B    = %0d",DUT.wr_addr_b);
+        $display(" WriteA Addr= %0d", DUT.ram_wr_addr_a);
+        $display(" WriteB Addr= %0d", DUT.ram_wr_addr_b);
+
+        $display("");
+
+        $display(" CoeffA     = %0d", DUT.coeff_a);
+        $display(" CoeffB     = %0d", DUT.coeff_b);
+
+        $display(" TwiddleAdr = %0d", DUT.twiddle_addr);
+        $display(" Twiddle    = %0d", DUT.twiddle);
+
+        $display("");
+
+        $display(" ButterflyA = %0d", DUT.butterfly_a);
+        $display(" ButterflyB = %0d", DUT.butterfly_b);
 
     end
 
-    //----------------------------------
-    // Dump memory afterwards
-    //----------------------------------
+    //--------------------------------------------------
+    // Read back memory
+    //--------------------------------------------------
 
     $display("");
     $display("--------------------------------");
-    $display("Final Memory");
+    $display("Reading memory");
     $display("--------------------------------");
 
     for(i=0;i<8;i=i+1) begin
@@ -115,10 +129,15 @@ initial begin
         read_addr = i;
 
         @(posedge clk);
+        @(posedge clk);
 
         $display("MEM[%0d] = %0d",i,read_data);
 
     end
+
+    $display("--------------------------------");
+    $display("Finished");
+    $display("--------------------------------");
 
     $finish;
 
