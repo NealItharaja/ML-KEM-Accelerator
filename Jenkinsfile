@@ -7,7 +7,7 @@ pipeline {
         DESIGN_DIR = "src/ntt"
         TB_DIR = "testbench/ntt"
 
-        TESTS = "butterfly"
+        TESTS = "ntt8"
     }
 
     triggers {
@@ -37,7 +37,7 @@ pipeline {
 
                     iverilog \
                         -o build/$test.out \
-                        ${DESIGN_DIR}/*.v src/arithmetic/*v \
+                        ${DESIGN_DIR}/*.v src/arithmetic/*v src/memory/*v \
                         ${TB_DIR}/test_${test}.v
 
                     vvp build/$test.out > logs/${test}.log
