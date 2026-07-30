@@ -4,10 +4,10 @@ pipeline {
     }
 
     environment {
-        DESIGN_DIR = "src/memory"
-        TB_DIR = "testbench/memory"
+        DESIGN_DIR = "src/ntt"
+        TB_DIR = "testbench/ntt"
 
-        TESTS = "coeff_ram"
+        TESTS = "ntt256"
     }
 
     triggers {
@@ -37,7 +37,7 @@ pipeline {
 
                     iverilog \
                         -o build/$test.out \
-                        ${DESIGN_DIR}/coeff_ram.v \
+                        ${DESIGN_DIR}/*.v src/arithmetic/*.v macros/*.v\
                         ${TB_DIR}/test_${test}.v
 
                     vvp build/$test.out > logs/${test}.log
