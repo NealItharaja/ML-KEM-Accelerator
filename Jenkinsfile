@@ -4,10 +4,10 @@ pipeline {
     }
 
     environment {
-        DESIGN_DIR = "src/ntt"
-        TB_DIR = "testbench/ntt"
+        DESIGN_DIR = "src/memory"
+        TB_DIR = "testbench/memory"
 
-        TESTS = "ntt8"
+        TESTS = "coeff_ram"
     }
 
     triggers {
