@@ -37,15 +37,12 @@ module ntt256(
     wire [11:0] twiddle;
 
     always @(posedge clk or posedge reset) begin
-        if (reset) begin
+        if (reset)
             running <= 1'b0;
-        end
-        else if begin
-            (start) running <= 1'b1;
-        end
-        else if begin
-            (done)  running <= 1'b0;
-        end
+        else if (start) 
+            running <= 1'b1;
+        else if (done)  
+            running <= 1'b0;
     end
 
     always @(*) begin
