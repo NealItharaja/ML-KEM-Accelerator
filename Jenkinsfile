@@ -37,7 +37,7 @@ pipeline {
 
                     iverilog \
                         -o build/$test.out \
-                        ${DESIGN_DIR}/*.v src/arithmetic/*v src/memory/*v macros/*v \
+                        ${DESIGN_DIR}/*.v src/arithmetic/*.v src/memory/*.v macros/*.lib \
                         ${TB_DIR}/test_${test}.v
 
                     vvp build/$test.out > logs/${test}.log
