@@ -1,4 +1,4 @@
-// Address generator for Kuber
+// Address generator for Kyber
 module address_gen(
     input clk,
     input reset,
