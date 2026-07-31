@@ -7,7 +7,7 @@ pipeline {
         DESIGN_DIR = "src/ntt"
         TB_DIR = "testbench/ntt"
         TESTS = "ntt"
-        SYNTH = "ntt"
+        SYNTH = "butterfly"
     }
 
     triggers {
@@ -60,6 +60,7 @@ pipeline {
 
                 librelane ${SYNTH}.json > logs/${SYNTH}_synth.log
                 '''
+            }
         }
     }
 
