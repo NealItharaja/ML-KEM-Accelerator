@@ -1,0 +1,20 @@
+{
+    "DESIGN_NAME": "NTT",
+
+    "VERILOG_FILES": [
+        "dir::./src/ntt/ntt.v"
+    ],
+
+    "FP_SIZING": "absolute",
+
+    "CLOCK_PORT": "clk",
+
+    "CLOCK_PERIOD": 30,
+
+    "DIE_AREA": [
+        0,
+        0,
+        900,
+        900
+    ]
+}

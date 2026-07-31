@@ -6,8 +6,8 @@ pipeline {
     environment {
         DESIGN_DIR = "src/ntt"
         TB_DIR = "testbench/ntt"
-
         TESTS = "ntt"
+        SYNTH = "ntt"
     }
 
     triggers {
@@ -15,7 +15,6 @@ pipeline {
     }
 
     stages {
-
         stage('Checkout') {
             steps {
                 checkout scm
@@ -50,6 +49,17 @@ pipeline {
                 done
                 '''
             }
+        }
+
+        stage('Librelane Synthesis') {
+            steps {
+                sh '''
+                echo "================================="
+                echo "Running Librelane Synthesis"
+                echo "================================="
+
+                librelane ${SYNTH}.json > logs/${SYNTH}_synth.log
+                '''
         }
     }
 
