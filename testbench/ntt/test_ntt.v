@@ -138,21 +138,21 @@ module test_ntt256;
         // ---------------------------------------------------------------
         // Golden NTT on gmem (same schedule / arithmetic as hardware)
         // ---------------------------------------------------------------
-        for (st = 0; st < 8; st = st + 1) begin
-            d        = 1 << st;
-            gps      = 1 << (7 - st);
-            tw_shift = (st <= 6) ? (6 - st) : 0;
+        twi = 1;                          // zetas index, runs 1..127
+        for (st = 0; st < 7; st = st + 1) begin
+            d   = 128 >> st;
+            gps = 1 << st;
             for (g = 0; g < gps; g = g + 1) begin
                 for (jj = 0; jj < d; jj = jj + 1) begin
-                    ai  = (g << (st + 1)) + jj;
+                    ai  = (g << (8 - st)) + jj;
                     bi  = ai + d;
-                    twi = jj << tw_shift;
                     Tt  = mont(gmem[bi] * tw[twi]);
                     na  = addmod(gmem[ai], Tt);
                     nb  = submod(gmem[ai], Tt);
                     gmem[ai] = na;
                     gmem[bi] = nb;
                 end
+                twi = twi + 1;
             end
         end
 

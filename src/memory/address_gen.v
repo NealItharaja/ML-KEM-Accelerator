@@ -24,24 +24,25 @@ module address_gen(
     reg [2:0] stage;
     reg [7:0] group;
     reg [7:0] j;
+    reg [6:0] tw_idx;
     reg [7:0] drain_cnt;
     reg we_sr [0:PIPE_LATENCY-1];
     reg [7:0] addra_sr [0:PIPE_LATENCY-1];
     reg [7:0] addrb_sr [0:PIPE_LATENCY-1];
-
-    wire [7:0] d = 8'd1 << stage;               
-    wire [7:0] groups_per_stage = 8'd1 << (3'd7 - stage);
+    
+    wire [7:0] d = 8'd128 >> stage;
+    wire [7:0] groups_per_stage = 8'd1 << stage;
+    wire [3:0] grp_shift = 4'd8 - {1'b0, stage};
     wire last_j = (j == d - 8'd1);
     wire last_group = (group == groups_per_stage - 8'd1);
     wire stage_last = last_j & last_group;
-    wire final_stage = (stage == 3'd7);
-    wire [3:0] tw_shift = (4'd6 >= {1'b0, stage}) ? (4'd6 - {1'b0, stage}) : 4'd0;
+    wire final_stage = (stage == 3'd6);
 
     always @(*) begin
         rd_en = (state == RUN);
-        rd_addr_a = (group << (stage + 3'd1)) + j;
+        rd_addr_a = (group << grp_shift) + j;
         rd_addr_b = rd_addr_a + d;
-        twiddle_addr = (j << tw_shift);
+        twiddle_addr = tw_idx;
     end
 
     always @(posedge clk or posedge reset) begin
@@ -50,6 +51,7 @@ module address_gen(
             stage <= 3'd0;
             group <= 8'd0;
             j <= 8'd0;
+            tw_idx <= 7'd1;
             drain_cnt <= 8'd0;
             done <= 1'b0;
         end 
@@ -60,6 +62,7 @@ module address_gen(
                         stage <= 3'd0;
                         group <= 8'd0;
                         j <= 8'd0;
+                        tw_idx <= 7'd1;
                         done <= 1'b0;
                         state <= RUN;
                     end
@@ -73,6 +76,7 @@ module address_gen(
                     else if (last_j) begin
                         j <= 8'd0;
                         group <= group + 8'd1;
+                        tw_idx <= tw_idx + 7'd1;
                     end 
                     else begin
                         j <= j + 8'd1;
@@ -87,6 +91,7 @@ module address_gen(
                             stage <= stage + 3'd1;
                             group <= 8'd0;
                             j <= 8'd0;
+                            tw_idx <= tw_idx + 7'd1;
                             state <= RUN;
                         end
                     end 
