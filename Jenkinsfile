@@ -50,18 +50,6 @@ pipeline {
                 '''
             }
         }
-
-        stage('Librelane Synthesis') {
-            steps {
-                sh '''
-                echo "================================="
-                echo "Running Librelane Synthesis"
-                echo "================================="
-
-                librelane ${SYNTH}.json > logs/${SYNTH}_synth.log
-                '''
-            }
-        }
     }
 
     post {
