@@ -13,8 +13,6 @@ module butterfly(
     reg [11:0] T_reg;
     reg [11:0] A_reg;
 
-    assign A = a;
-
     mod_mult product (
         .A(b),
         .B(twiddle),
