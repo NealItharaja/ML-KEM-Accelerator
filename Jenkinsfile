@@ -6,8 +6,7 @@ pipeline {
     environment {
         DESIGN_DIR = "src/ntt"
         TB_DIR = "testbench/ntt"
-        TESTS = "ntt"
-        SYNTH = "butterfly"
+        TESTS = "intt"
     }
 
     triggers {

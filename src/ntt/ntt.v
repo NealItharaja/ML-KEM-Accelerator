@@ -74,6 +74,7 @@ module ntt256(
         .clk(clk),
         .reset(reset),
         .start(start),
+        .inverse(1'b0),
         .rd_en(rd_en),
         .rd_addr_a(rd_addr_a),
         .rd_addr_b(rd_addr_b),

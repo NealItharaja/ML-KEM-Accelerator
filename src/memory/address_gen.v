@@ -3,6 +3,7 @@ module address_gen(
     input clk,
     input reset,
     input start,
+    input inverse,
     output reg rd_en,
     output reg [7:0] rd_addr_a,
     output reg [7:0] rd_addr_b,
@@ -30,9 +31,9 @@ module address_gen(
     reg [7:0] addra_sr [0:PIPE_LATENCY-1];
     reg [7:0] addrb_sr [0:PIPE_LATENCY-1];
     
-    wire [7:0] d = 8'd128 >> stage;
-    wire [7:0] groups_per_stage = 8'd1 << stage;
-    wire [3:0] grp_shift = 4'd8 - {1'b0, stage};
+    wire [7:0] d = inverse ? (8'd2 << stage) : (8'd128 >> stage);
+    wire [7:0] groups_per_stage = inverse ? (8'd1 << (3'd6 - stage)) : (8'd1 << stage);
+    wire [3:0] grp_shift = inverse ? (4'd2 + {1'b0, stage}) : (4'd8 - {1'b0, stage});
     wire last_j = (j == d - 8'd1);
     wire last_group = (group == groups_per_stage - 8'd1);
     wire stage_last = last_j & last_group;
@@ -51,7 +52,7 @@ module address_gen(
             stage <= 3'd0;
             group <= 8'd0;
             j <= 8'd0;
-            tw_idx <= 7'd1;
+            tw_idx <= inverse ? 7'd127 : 7'd1;
             drain_cnt <= 8'd0;
             done <= 1'b0;
         end 
@@ -62,7 +63,7 @@ module address_gen(
                         stage <= 3'd0;
                         group <= 8'd0;
                         j <= 8'd0;
-                        tw_idx <= 7'd1;
+                        tw_idx <= inverse ? 7'd127 : 7'd1;
                         done <= 1'b0;
                         state <= RUN;
                     end
@@ -76,7 +77,7 @@ module address_gen(
                     else if (last_j) begin
                         j <= 8'd0;
                         group <= group + 8'd1;
-                        tw_idx <= tw_idx + 7'd1;
+                        tw_idx <= inverse ? (tw_idx - 7'd1) : (tw_idx + 7'd1);
                     end 
                     else begin
                         j <= j + 8'd1;
@@ -91,7 +92,7 @@ module address_gen(
                             stage <= stage + 3'd1;
                             group <= 8'd0;
                             j <= 8'd0;
-                            tw_idx <= tw_idx + 7'd1;
+                            tw_idx <= inverse ? (tw_idx - 7'd1) : (tw_idx + 7'd1);
                             state <= RUN;
                         end
                     end 
