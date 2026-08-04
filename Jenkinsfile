@@ -6,7 +6,7 @@ pipeline {
     environment {
         DESIGN_DIR = "src/encode"
         TB_DIR = "testbench/encoding"
-        TESTS = "pack"
+        TESTS = "pack unpack"
     }
 
     triggers {
