@@ -1,13 +1,12 @@
 `timescale 1ns/1ps
 
-// Testbench for Kyber ByteEncode_12 pack.
-// Checks: single-pair encoding, a few hand pairs, and a full 256-coeff poly
-// against the poly_tobytes bit layout.
+// Testbench for parameterized ByteEncode_d pack (default D=12).
 
 module test_pack;
+
     reg clk;
     reg start;
-    reg [11:0] coeff_a, coeff_b;
+    reg [11:0] coeff_in;
     reg coeff_valid;
 
     wire ready;
@@ -15,17 +14,17 @@ module test_pack;
     wire byte_valid;
     wire done;
 
-    integer i, errors, checks;
+    integer i, j, b, errors, checks, nbytes;
     reg [11:0] poly [0:255];
     reg [7:0]  got_bytes [0:383];
     reg [7:0]  exp_bytes [0:383];
-    reg [7:0]  b0, b1, b2;
+    reg        bits [0:3071];
 
-    pack DUT(
+    // Default D=12
+    pack #(.D(12)) DUT(
         .clk(clk),
         .start(start),
-        .coeff_a(coeff_a),
-        .coeff_b(coeff_b),
+        .coeff_in(coeff_in),
         .coeff_valid(coeff_valid),
         .ready(ready),
         .byte_out(byte_out),
@@ -33,46 +32,60 @@ module test_pack;
         .done(done)
     );
 
+    // Also check D=10 and D=4
+    reg start10, cv10;
+    reg [11:0] cin10;
+    wire ready10, bv10, done10;
+    wire [7:0] bout10;
+    reg [7:0] got10 [0:319];
+    reg [7:0] exp10 [0:319];
+
+    pack #(.D(10)) DUT10(
+        .clk(clk),
+        .start(start10),
+        .coeff_in(cin10),
+        .coeff_valid(cv10),
+        .ready(ready10),
+        .byte_out(bout10),
+        .byte_valid(bv10),
+        .done(done10)
+    );
+
+    reg start4, cv4;
+    reg [11:0] cin4;
+    wire ready4, bv4, done4;
+    wire [7:0] bout4;
+    reg [7:0] got4 [0:127];
+    reg [7:0] exp4 [0:127];
+
+    pack #(.D(4)) DUT4(
+        .clk(clk),
+        .start(start4),
+        .coeff_in(cin4),
+        .coeff_valid(cv4),
+        .ready(ready4),
+        .byte_out(bout4),
+        .byte_valid(bv4),
+        .done(done4)
+    );
+
     always #5 clk = ~clk;
 
-    // Kyber poly_tobytes for one pair
-    task encode_pair;
-        input  [11:0] a;
-        input  [11:0] b;
-        output [7:0]  y0;
-        output [7:0]  y1;
-        output [7:0]  y2;
+    // Golden ByteEncode_d into exp_bytes[0 .. 32*d-1]
+    task golden_encode;
+        input integer d;
         begin
-            y0 = a[7:0];
-            y1 = {b[3:0], a[11:8]};
-            y2 = b[11:4];
-        end
-    endtask
+            for (i = 0; i < 256; i = i + 1)
+                for (j = 0; j < d; j = j + 1)
+                    bits[i*d + j] = poly[i][j];
 
-    // Push one pair, collect the 3 emitted bytes
-    task push_pair_get_bytes;
-        input  [11:0] a;
-        input  [11:0] b;
-        output [7:0]  y0;
-        output [7:0]  y1;
-        output [7:0]  y2;
-        begin
-            @(negedge clk);
-            while (!ready) @(negedge clk);
-            coeff_a = a;
-            coeff_b = b;
-            coeff_valid = 1'b1;
-            @(negedge clk);
-            coeff_valid = 1'b0;
-
-            while (!byte_valid) @(posedge clk);
-            y0 = byte_out;
-            @(posedge clk);
-            while (!byte_valid) @(posedge clk);
-            y1 = byte_out;
-            @(posedge clk);
-            while (!byte_valid) @(posedge clk);
-            y2 = byte_out;
+            nbytes = 32 * d;
+            for (b = 0; b < nbytes; b = b + 1) begin
+                exp_bytes[b] = 8'd0;
+                for (j = 0; j < 8; j = j + 1)
+                    if (bits[8*b + j])
+                        exp_bytes[b] = exp_bytes[b] | (8'd1 << j);
+            end
         end
     endtask
 
@@ -86,106 +99,62 @@ module test_pack;
                 errors = errors + 1;
                 $display("FAIL %0s: got=%02h exp=%02h", name, got, exp);
             end
-            else begin
+            else
                 $display("PASS %0s: %02h", name, got);
-            end
+        end
+    endtask
+
+    // Feed one coeff, wait until ready again (may emit bytes meanwhile)
+    task push_coeff;
+        input [11:0] c;
+        begin
+            @(negedge clk);
+            while (!ready) @(negedge clk);
+            coeff_in = c;
+            coeff_valid = 1'b1;
+            @(negedge clk);
+            coeff_valid = 1'b0;
         end
     endtask
 
     initial begin
         clk = 0;
         start = 0;
-        coeff_a = 0;
-        coeff_b = 0;
+        start10 = 0;
+        start4 = 0;
+        coeff_in = 0;
+        cin10 = 0;
+        cin4 = 0;
         coeff_valid = 0;
+        cv10 = 0;
+        cv4 = 0;
         errors = 0;
         checks = 0;
-
-        // ---------------------------------------------------------------
-        // Test 1: single pair, known values
-        // a=0x123 -> bytes use low 12 bits 0x123
-        // b=0xABC
-        // byte0=0x23, byte1={0xC,0x1}=0xC1, byte2=0xAB
-        // ---------------------------------------------------------------
-        $display("================================");
-        $display("Test 1: single pair (0x123, 0xABC)");
-        $display("================================");
-
-        @(negedge clk);
-        start = 1;
-        @(negedge clk);
-        start = 0;
-
-        push_pair_get_bytes(12'h123, 12'hABC, b0, b1, b2);
-        encode_pair(12'h123, 12'hABC, exp_bytes[0], exp_bytes[1], exp_bytes[2]);
-        check_byte(b0, exp_bytes[0], "pair0 byte0");
-        check_byte(b1, exp_bytes[1], "pair0 byte1");
-        check_byte(b2, exp_bytes[2], "pair0 byte2");
-
-        // ---------------------------------------------------------------
-        // Test 2: edge pairs
-        // ---------------------------------------------------------------
-        $display("================================");
-        $display("Test 2: edge pairs");
-        $display("================================");
-
-        // Restart a fresh poly for a clean pair counter — feed 128 pairs
-        // below in test 3. For now just check encoding math on a few pairs
-        // by restarting each time (done will fire after 128; for unit checks
-        // of the bit layout we only need the 3 bytes).
-        @(negedge clk); start = 1; @(negedge clk); start = 0;
-        push_pair_get_bytes(12'h000, 12'h000, b0, b1, b2);
-        check_byte(b0, 8'h00, "zero byte0");
-        check_byte(b1, 8'h00, "zero byte1");
-        check_byte(b2, 8'h00, "zero byte2");
-
-        @(negedge clk); start = 1; @(negedge clk); start = 0;
-        push_pair_get_bytes(12'hFFF, 12'hFFF, b0, b1, b2);
-        check_byte(b0, 8'hFF, "ones byte0");
-        check_byte(b1, 8'hFF, "ones byte1");
-        check_byte(b2, 8'hFF, "ones byte2");
-
-        @(negedge clk); start = 1; @(negedge clk); start = 0;
-        push_pair_get_bytes(12'h001, 12'h010, b0, b1, b2);
-        encode_pair(12'h001, 12'h010, exp_bytes[0], exp_bytes[1], exp_bytes[2]);
-        check_byte(b0, exp_bytes[0], "small byte0");
-        check_byte(b1, exp_bytes[1], "small byte1");
-        check_byte(b2, exp_bytes[2], "small byte2");
-
-        // ---------------------------------------------------------------
-        // Test 3: full 256-coefficient polynomial
-        // ---------------------------------------------------------------
-        $display("================================");
-        $display("Test 3: full poly (256 coeffs)");
-        $display("================================");
 
         for (i = 0; i < 256; i = i + 1)
             poly[i] = (i * 7 + 13) % 3329;
 
-        for (i = 0; i < 128; i = i + 1)
-            encode_pair(poly[2*i], poly[2*i+1],
-                        exp_bytes[3*i], exp_bytes[3*i+1], exp_bytes[3*i+2]);
+        // ---------------------------------------------------------------
+        $display("================================");
+        $display("Test 1: D=12 known pair as two coeffs");
+        $display("================================");
+        // a=0x123, b=0xABC -> 23, C1, AB
+        poly[0] = 12'h123;
+        poly[1] = 12'hABC;
+        for (i = 2; i < 256; i = i + 1)
+            poly[i] = 12'd0;
 
-        @(negedge clk);
-        start = 1;
-        @(negedge clk);
-        start = 0;
+        golden_encode(12);
 
-        i = 0;
+        @(negedge clk); start = 1; @(negedge clk); start = 0;
+
         fork
-            begin : feed
+            begin : feed12
                 integer p;
-                for (p = 0; p < 128; p = p + 1) begin
-                    @(negedge clk);
-                    while (!ready) @(negedge clk);
-                    coeff_a = poly[2*p];
-                    coeff_b = poly[2*p+1];
-                    coeff_valid = 1'b1;
-                    @(negedge clk);
-                    coeff_valid = 1'b0;
-                end
+                for (p = 0; p < 256; p = p + 1)
+                    push_coeff(poly[p]);
             end
-            begin : collect
+            begin : collect12
                 integer n;
                 n = 0;
                 while (n < 384) begin
@@ -197,29 +166,145 @@ module test_pack;
                 end
             end
         join
-
         wait (done);
         @(posedge clk);
+
+        check_byte(got_bytes[0], 8'h23, "D12 first byte0");
+        check_byte(got_bytes[1], 8'hC1, "D12 first byte1");
+        check_byte(got_bytes[2], 8'hAB, "D12 first byte2");
 
         for (i = 0; i < 384; i = i + 1) begin
             checks = checks + 1;
             if (got_bytes[i] !== exp_bytes[i]) begin
                 errors = errors + 1;
                 if (errors <= 20)
-                    $display("FAIL poly byte[%0d]: got=%02h exp=%02h",
+                    $display("FAIL D12 byte[%0d]: got=%02h exp=%02h",
                              i, got_bytes[i], exp_bytes[i]);
             end
         end
-
         if (errors == 0)
-            $display("PASS full poly: all 384 bytes match Kyber poly_tobytes");
+            $display("PASS D=12 full poly (384 bytes)");
+
+        // ---------------------------------------------------------------
+        $display("================================");
+        $display("Test 2: D=10 full poly (320 bytes)");
+        $display("================================");
+        for (i = 0; i < 256; i = i + 1)
+            poly[i] = (i * 7 + 13) & 10'h3FF;
+
+        // rebuild golden into exp10 via bits
+        for (i = 0; i < 256; i = i + 1)
+            for (j = 0; j < 10; j = j + 1)
+                bits[i*10 + j] = poly[i][j];
+        for (b = 0; b < 320; b = b + 1) begin
+            exp10[b] = 8'd0;
+            for (j = 0; j < 8; j = j + 1)
+                if (bits[8*b + j])
+                    exp10[b] = exp10[b] | (8'd1 << j);
+        end
+
+        @(negedge clk); start10 = 1; @(negedge clk); start10 = 0;
+        fork
+            begin : feed10
+                integer p;
+                for (p = 0; p < 256; p = p + 1) begin
+                    @(negedge clk);
+                    while (!ready10) @(negedge clk);
+                    cin10 = poly[p];
+                    cv10 = 1'b1;
+                    @(negedge clk);
+                    cv10 = 1'b0;
+                end
+            end
+            begin : collect10
+                integer n;
+                n = 0;
+                while (n < 320) begin
+                    @(posedge clk);
+                    if (bv10) begin
+                        got10[n] = bout10;
+                        n = n + 1;
+                    end
+                end
+            end
+        join
+        wait (done10);
+        @(posedge clk);
+
+        for (i = 0; i < 320; i = i + 1) begin
+            checks = checks + 1;
+            if (got10[i] !== exp10[i]) begin
+                errors = errors + 1;
+                if (errors <= 20)
+                    $display("FAIL D10 byte[%0d]: got=%02h exp=%02h",
+                             i, got10[i], exp10[i]);
+            end
+        end
+        if (errors == 0)
+            $display("PASS D=10 full poly (320 bytes)");
+
+        // ---------------------------------------------------------------
+        $display("================================");
+        $display("Test 3: D=4 full poly (128 bytes)");
+        $display("================================");
+        for (i = 0; i < 256; i = i + 1)
+            poly[i] = (i * 3 + 1) & 4'hF;
+
+        for (i = 0; i < 256; i = i + 1)
+            for (j = 0; j < 4; j = j + 1)
+                bits[i*4 + j] = poly[i][j];
+        for (b = 0; b < 128; b = b + 1) begin
+            exp4[b] = 8'd0;
+            for (j = 0; j < 8; j = j + 1)
+                if (bits[8*b + j])
+                    exp4[b] = exp4[b] | (8'd1 << j);
+        end
+
+        @(negedge clk); start4 = 1; @(negedge clk); start4 = 0;
+        fork
+            begin : feed4
+                integer p;
+                for (p = 0; p < 256; p = p + 1) begin
+                    @(negedge clk);
+                    while (!ready4) @(negedge clk);
+                    cin4 = poly[p];
+                    cv4 = 1'b1;
+                    @(negedge clk);
+                    cv4 = 1'b0;
+                end
+            end
+            begin : collect4
+                integer n;
+                n = 0;
+                while (n < 128) begin
+                    @(posedge clk);
+                    if (bv4) begin
+                        got4[n] = bout4;
+                        n = n + 1;
+                    end
+                end
+            end
+        join
+        wait (done4);
+        @(posedge clk);
+
+        for (i = 0; i < 128; i = i + 1) begin
+            checks = checks + 1;
+            if (got4[i] !== exp4[i]) begin
+                errors = errors + 1;
+                if (errors <= 20)
+                    $display("FAIL D4 byte[%0d]: got=%02h exp=%02h",
+                             i, got4[i], exp4[i]);
+            end
+        end
+        if (errors == 0)
+            $display("PASS D=4 full poly (128 bytes)");
 
         $display("--------------------------------");
         $display("Checked %0d, mismatches %0d", checks, errors);
         if (errors == 0) $display("TEST PASSED");
         else             $display("TEST FAILED");
         $display("--------------------------------");
-
         $finish;
     end
 

@@ -1,9 +1,10 @@
-// 'Packing' data: converts coefficients into byte streams
-module pack(
+// Packs coefficients
+module pack #(
+    parameter D = 12
+)(
     input clk,
     input start,
-    input [11:0] coeff_a,
-    input [11:0] coeff_b,
+    input [11:0] coeff_in,
     input coeff_valid,
     output ready,
     output reg [7:0] byte_out,
@@ -12,14 +13,18 @@ module pack(
     );
 
     localparam [1:0] WAIT = 2'd0;
-    localparam [1:0] E0 = 2'd1;
-    localparam [1:0] E1 = 2'd2;
-    localparam [1:0] E2 = 2'd3;
+    localparam [1:0] EMIT = 2'd1;
+    localparam integer BUF_W = D + 8;
 
     reg active;
     reg [1:0] state;
-    reg [7:0] b0, b1, b2;
-    reg [7:0] pairs_done;
+    reg [BUF_W-1:0] bit_buf;
+    reg [4:0] bits;
+    reg [8:0] coeffs_done;
+
+    wire [BUF_W-1:0] coeff_ext = {{(BUF_W-D){1'b0}}, coeff_in[D-1:0]};
+    wire [4:0] bits_after_in  = bits + D[4:0];
+    wire [4:0] bits_after_out = bits - 5'd8;
 
     assign ready = active && (state == WAIT);
 
@@ -27,13 +32,12 @@ module pack(
         if (start) begin
             active <= 1'b1;
             state <= WAIT;
-            pairs_done <= 8'd0;
+            bit_buf <= {BUF_W{1'b0}};
+            bits <= 5'd0;
+            coeffs_done <= 9'd0;
             byte_valid <= 1'b0;
             byte_out <= 8'd0;
             done <= 1'b0;
-            b0 <= 8'd0;
-            b1 <= 8'd0;
-            b2 <= 8'd0;
         end
         else if (active) begin
             done <= 1'b0;
@@ -41,38 +45,33 @@ module pack(
             case (state)
                 WAIT: begin
                     byte_valid <= 1'b0;
-
                     if (coeff_valid) begin
-                        b0 <= coeff_a[7:0];
-                        b1 <= {coeff_b[3:0], coeff_a[11:8]};
-                        b2 <= coeff_b[11:4];
-                        pairs_done <= pairs_done + 8'd1;
-                        state <= E0;
+                        bit_buf <= bit_buf | (coeff_ext << bits);
+                        bits <= bits_after_in;
+                        coeffs_done <= coeffs_done + 9'd1;
+
+                        if (bits_after_in >= 5'd8)
+                            state <= EMIT;
                     end
                 end
 
-                E0: begin
-                    byte_out <= b0;
+                EMIT: begin
+                    byte_out <= bit_buf[7:0];
                     byte_valid <= 1'b1;
-                    state <= E1;
-                end
+                    bit_buf <= bit_buf >> 8;
+                    bits <= bits_after_out;
 
-                E1: begin
-                    byte_out <= b1;
-                    byte_valid <= 1'b1;
-                    state <= E2;
-                end
-
-                E2: begin
-                    byte_out <= b2;
-                    byte_valid <= 1'b1;
-
-                    if (pairs_done == 8'd128) begin
+                    if (bits_after_out >= 5'd8) begin
+                        state <= EMIT;
+                    end
+                    else if ((coeffs_done == 9'd256) && (bits_after_out == 5'd0)) begin
                         done <= 1'b1;
                         active <= 1'b0;
+                        state <= WAIT;
                     end
-                    
-                    state <= WAIT;
+                    else begin
+                        state <= WAIT;
+                    end
                 end
 
                 default: state <= WAIT;

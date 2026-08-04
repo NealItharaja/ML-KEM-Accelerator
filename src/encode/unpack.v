@@ -1,40 +1,45 @@
-// Unpack bytes into coefficients
-module unpack(
+// Unpacs data
+module unpack #(
+    parameter D = 12
+)(
     input clk,
     input start,
     input [7:0] byte_in,
     input byte_valid,
     output ready,
-    output reg [11:0] coeff_a,
-    output reg [11:0] coeff_b,
+    output reg [11:0] coeff_out,
     output reg coeff_valid,
     output reg done
     );
 
     localparam [1:0] WAIT = 2'd0;
-    localparam [1:0] E0 = 2'd1;
-    localparam [1:0] E1 = 2'd2;
-    localparam [1:0] E2 = 2'd3;
+    localparam [1:0] OUT = 2'd1;
+    localparam integer BUF_W = D + 8;
+    localparam integer N_BYTES = 32 * D;
 
     reg active;
     reg [1:0] state;
-    reg [7:0] y0, y1, y2;
-    reg [7:0] pairs_done;
+    reg [BUF_W-1:0] bit_buf;
+    reg [4:0] bits;
+    reg [8:0] coeffs_done;
+    reg [9:0] bytes_done;
 
-    assign ready = active && (state != E2);
+    wire [4:0] bits_after_in  = bits + 5'd8;
+    wire [4:0] bits_after_out = bits - D[4:0];
+
+    assign ready = active && (state == WAIT);
 
     always @(posedge clk) begin
         if (start) begin
             active <= 1'b1;
             state <= WAIT;
-            pairs_done <= 8'd0;
+            bit_buf <= {BUF_W{1'b0}};
+            bits <= 5'd0;
+            coeffs_done <= 9'd0;
+            bytes_done <= 10'd0;
             coeff_valid <= 1'b0;
-            coeff_a <= 12'd0;
-            coeff_b <= 12'd0;
+            coeff_out <= 12'd0;
             done <= 1'b0;
-            y0 <= 8'd0;
-            y1 <= 8'd0;
-            y2 <= 8'd0;
         end
         else if (active) begin
             done <= 1'b0;
@@ -42,40 +47,36 @@ module unpack(
             case (state)
                 WAIT: begin
                     coeff_valid <= 1'b0;
-
                     if (byte_valid) begin
-                        y0 <= byte_in;
-                        state <= E0;
+                        bit_buf <= bit_buf | ({{(BUF_W-8){1'b0}}, byte_in} << bits);
+                        bits <= bits_after_in;
+                        bytes_done <= bytes_done + 10'd1;
+
+                        if (bits_after_in >= D[4:0])
+                            state <= OUT;
                     end
                 end
 
-                E0: begin
-                    if (byte_valid) begin
-                        y1 <= byte_in;
-                        state <= E1;
-                    end
-                end
-
-                E1: begin
-                    if (byte_valid) begin
-                        y2 <= byte_in;
-                        pairs_done <= pairs_done + 8'd1;
-                        state <= E2;
-                    end
-                end
-
-                E2: begin
-                    coeff_a <= {y1[3:0], y0};
-                    coeff_b <= {y2, y1[7:4]};
+                OUT: begin
+                    coeff_out <= 12'd0 | bit_buf[D-1:0];
                     coeff_valid <= 1'b1;
+                    bit_buf <= bit_buf >> D;
+                    bits <= bits_after_out;
+                    coeffs_done <= coeffs_done + 9'd1;
 
-                    if (pairs_done == 8'd128) begin
+                    if ((coeffs_done + 9'd1) == 9'd256) begin
                         done <= 1'b1;
                         active <= 1'b0;
+                        state <= WAIT;
                     end
-
-                    state <= WAIT;
+                    else if (bits_after_out >= D[4:0]) begin
+                        state <= OUT;
+                    end
+                    else begin
+                        state <= WAIT;
+                    end
                 end
+
                 default: state <= WAIT;
             endcase
         end
