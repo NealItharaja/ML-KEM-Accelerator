@@ -9,8 +9,8 @@ module shake128(
     input squeeze,
     output reg [7:0] dout,
     output reg dout_valid,
-    output absorb_done
-    output ready,
+    output absorb_done,
+    output ready
     );
 
     localparam integer RATE = 168;
