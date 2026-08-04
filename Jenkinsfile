@@ -4,9 +4,9 @@ pipeline {
     }
 
     environment {
-        DESIGN_DIR = "src/encode"
-        TB_DIR = "testbench/encoding"
-        TESTS = "pack unpack compress decompress"
+        DESIGN_DIR = "src/ntt"
+        TB_DIR = "testbench/ntt"
+        TESTS = "basemul"
     }
 
     triggers {
