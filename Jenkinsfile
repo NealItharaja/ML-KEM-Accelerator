@@ -4,8 +4,8 @@ pipeline {
     }
 
     environment {
-        DESIGN_DIR = "src/encoding"
-        TB_DIR = "testbench/encoding"
+        DESIGN_DIR = "src/encode"
+        TB_DIR = "testbench/encode"
         TESTS = "pack"
     }
 
