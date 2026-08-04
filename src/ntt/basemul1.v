@@ -31,7 +31,11 @@ module basemul1(
         .result(intermediate)
     );
 
-    assign r0 = r0 + intermediate;
+    mod_add first_add (
+        .A(r0),
+        .B(intermediate),
+        .result(r0)
+    );
 
     mod_mult fourth (
         .A(a0),
@@ -45,5 +49,9 @@ module basemul1(
         .result(b_intermediate)
     );
 
-    assign r1 = r1 + b_intermediate;
+    mod_add first_add (
+        .A(r1),
+        .B(b_intermediate),
+        .result(r1)
+    );
 endmodule
