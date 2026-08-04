@@ -18,7 +18,7 @@ module coeff_ram(
     reg [11:0] b0_q, b1_q;
     reg read_a_in_bank0_d;
     
-    wire read_a_in_bank0  = (^rd_addr_a) == 1'b0;
+    wire read_a_in_bank0 = (^rd_addr_a) == 1'b0;
     wire write_a_in_bank0 = (^wr_addr_a) == 1'b0;
     wire [6:0] b0_raddr = read_a_in_bank0 ? rd_addr_a[7:1] : rd_addr_b[7:1];
     wire [6:0] b1_raddr = read_a_in_bank0 ? rd_addr_b[7:1] : rd_addr_a[7:1];
