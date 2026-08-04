@@ -4,9 +4,9 @@ pipeline {
     }
 
     environment {
-        DESIGN_DIR = "src/ntt"
-        TB_DIR = "testbench/ntt"
-        TESTS = "intt"
+        DESIGN_DIR = "src/encoding"
+        TB_DIR = "testbench/encoding"
+        TESTS = "pack"
     }
 
     triggers {
