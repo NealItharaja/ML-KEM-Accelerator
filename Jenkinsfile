@@ -6,7 +6,7 @@ pipeline {
     environment {
         DESIGN_DIR = "src/hashing"
         TB_DIR = "testbench/hashing"
-        TESTS = "keccack shake128"
+        TESTS = "keccack shake128 shake256 sha3-256 sha3-512"
     }
 
     triggers {
