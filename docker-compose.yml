@@ -1,0 +1,11 @@
+version: "3.9"
+
+services:
+  dev:
+    build: .
+    container_name: mlkem-dev
+    working_dir: /workspace
+    volumes:
+      - .:/workspace
+    stdin_open: true
+    tty: true

@@ -1,0 +1,58 @@
+{
+  "DESIGN_NAME": "kem",
+
+  "VERILOG_FILES": [
+    "dir::./src/kem.v",
+    "dir::./src/kem_ops.v",
+    "dir::./src/alu/alu.v",
+    "dir::./src/arithmetic/mod_add.v",
+    "dir::./src/arithmetic/mod_sub.v",
+    "dir::./src/arithmetic/mod_mult.v",
+    "dir::./src/arithmetic/montgomery.v",
+    "dir::./src/arithmetic/to_montgomery.v",
+    "dir::./src/arithmetic/from_montgomery.v",
+    "dir::./src/ntt/butterfly.v",
+    "dir::./src/ntt/butterfly_gs.v",
+    "dir::./src/ntt/basemul.v",
+    "dir::./src/ntt/ntt.v",
+    "dir::./src/ntt/intt.v",
+    "dir::./src/memory/address_gen.v",
+    "dir::./src/memory/coeff_ram.v",
+    "dir::./src/memory/twiddle_rom.v",
+    "dir::./src/hashing/keccack.v",
+    "dir::./src/hashing/shake128.v",
+    "dir::./src/hashing/shake256.v",
+    "dir::./src/hashing/sha3-256.v",
+    "dir::./src/hashing/sha3-512.v",
+    "dir::./src/generation/sample_ntt.v",
+    "dir::./src/generation/sample_poly_CBD.v",
+    "dir::./src/encode/compress.v",
+    "dir::./src/encode/decompress.v",
+    "dir::./src/encode/pack.v",
+    "dir::./src/encode/unpack.v"
+  ],
+
+  "CLOCK_PORT": "clk",
+
+  "CLOCK_NET": "clk",
+
+  "CLOCK_PERIOD": 50.0,
+
+  "FP_SIZING": "absolute",
+
+  "DIE_AREA": [0, 0, 4500, 4500],
+
+  "CORE_AREA": [10, 10, 4490, 4490],
+
+  "FP_PDN_MULTILAYER": true,
+
+  "MAX_TRANSITION_CONSTRAINT": 1.5,
+
+  "MAX_FANOUT_CONSTRAINT": 16,
+
+  "SYNTH_STRATEGY": "AREA 0",
+
+  "VERILOG_INCLUDE_DIRS": [
+    "dir::./src/memory"
+  ]
+}
