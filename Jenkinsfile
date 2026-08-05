@@ -6,7 +6,7 @@ pipeline {
     environment {
         DESIGN_DIR = "src/generation"
         TB_DIR = "testbench/generation"
-        TESTS = "sample_ntt"
+        TESTS = "sample_ntt sample_poly_CBD"
     }
 
     triggers {
