@@ -4,9 +4,9 @@ pipeline {
     }
 
     environment {
-        DESIGN_DIR = "src/generation"
-        TB_DIR = "testbench/generation"
-        TESTS = "sample_ntt sample_poly_CBD"
+        DESIGN_DIR = "src/alu"
+        TB_DIR = "testbench/alu"
+        TESTS = "alu"
     }
 
     triggers {
