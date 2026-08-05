@@ -16,7 +16,7 @@ module sample_poly_CBD #(
     localparam integer NEED_BITS = 2 * ETA;
     localparam [2:0] IDLE = 3'd0;
     localparam [2:0] ABSORB_SEED = 3'd1;
-    localparam [2:0] WAIT_XO = 3'd2;
+    localparam [2:0] WAIT_XOF = 3'd2;
     localparam [2:0] REQ_BYTE = 3'd3;
     localparam [2:0] GOT_BYTE = 3'd4;
     localparam [2:0] EMIT = 3'd5;
