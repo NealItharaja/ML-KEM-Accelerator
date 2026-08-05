@@ -4,9 +4,9 @@ pipeline {
     }
 
     environment {
-        DESIGN_DIR = "src/alu"
-        TB_DIR = "testbench/alu"
-        TESTS = "alu"
+        DESIGN_DIR = "src"
+        TB_DIR = "testbench"
+        TESTS = "kem"
     }
 
     triggers {
@@ -35,7 +35,7 @@ pipeline {
 
                     iverilog \
                         -o build/$test.out \
-                        ${DESIGN_DIR}/*.v src/memory/*.v src/arithmetic/*.v macros/*.v src/hashing/*v \
+                        ${DESIGN_DIR}/*.v \
                         ${TB_DIR}/test_${test}.v
 
                     vvp build/$test.out > logs/${test}.log
