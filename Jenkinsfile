@@ -4,9 +4,9 @@ pipeline {
     }
 
     environment {
-        DESIGN_DIR = "src/hashing"
-        TB_DIR = "testbench/hashing"
-        TESTS = "keccack shake128 shake256 sha3-256 sha3-512"
+        DESIGN_DIR = "src/generation"
+        TB_DIR = "testbench/generation"
+        TESTS = "sample_ntt"
     }
 
     triggers {
