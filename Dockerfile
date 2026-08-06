@@ -1,32 +1,20 @@
-FROM ubuntu:24.04
+FROM nixos/nix:latest
 
-ENV DEBIAN_FRONTEND=noninteractive
-ENV USER=root
+RUN nix-channel --update
 
-# 1. Install Verilog, Python, and dependencies for Nix
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    git \
-    make \
-    python3 \
-    python3-pip \
-    iverilog \
-    gtkwave \
-    vim \
-    wget \
-    curl \
-    xz-utils \
-    && rm -rf /var/lib/apt/lists/*
+# Uninstall the pre-packaged minimal git to avoid file collisions
+RUN nix-env -e git git-minimal || true
 
-# 2. Install Nix natively in the Docker container
-RUN mkdir -m 0755 /nix && chown root /nix
-RUN curl -L https://nixos.org/nix/install | sh -s -- --no-daemon
-
-# 3. Add Nix to PATH and enable modern features (Flakes)
-ENV PATH="/root/.nix-profile/bin:$PATH"
-RUN mkdir -p /etc/nix && \
-    echo "experimental-features = nix-command flakes" > /etc/nix/nix.conf
+# Install the requested packages
+RUN nix-env -iA \
+    nixpkgs.python3 \
+    nixpkgs.git \
+    nixpkgs.gcc \
+    nixpkgs.gnumake \
+    nixpkgs.iverilog \
+    nixpkgs.gtkwave \
+    nixpkgs.vim
 
 WORKDIR /workspace
 
-CMD ["/bin/bash"]
+CMD ["/bin/sh"]

@@ -48,16 +48,16 @@ alu: prepare
 
 encoding: prepare
 	@echo "--- Building & Running Encoding Tests ---"
-	$(IVERILOG) -o $(BUILD)/test_compress.out $(SRC)/encode/compress.v $(TB)/encoding/test_compress.v
+	$(IVERILOG) -o $(BUILD)/test_compress.out $(ALL_SRC) $(TB)/encoding/test_compress.v
 	$(VVP) $(BUILD)/test_compress.out > $(LOGS)/test_compress.log
 
-	$(IVERILOG) -o $(BUILD)/test_decompress.out $(SRC)/encode/decompress.v $(TB)/encoding/test_decompress.v
+	$(IVERILOG) -o $(BUILD)/test_decompress.out $(ALL_SRC) $(TB)/encoding/test_decompress.v
 	$(VVP) $(BUILD)/test_decompress.out > $(LOGS)/test_decompress.log
 
-	$(IVERILOG) -o $(BUILD)/test_pack.out $(SRC)/encode/pack.v $(TB)/encoding/test_pack.v
+	$(IVERILOG) -o $(BUILD)/test_pack.out $(ALL_SRC) $(TB)/encoding/test_pack.v
 	$(VVP) $(BUILD)/test_pack.out > $(LOGS)/test_pack.log
 
-	$(IVERILOG) -o $(BUILD)/test_unpack.out $(SRC)/encode/unpack.v $(TB)/encoding/test_unpack.v
+	$(IVERILOG) -o $(BUILD)/test_unpack.out $(ALL_SRC) $(TB)/encoding/test_unpack.v
 	$(VVP) $(BUILD)/test_unpack.out > $(LOGS)/test_unpack.log
 
 hashing: prepare

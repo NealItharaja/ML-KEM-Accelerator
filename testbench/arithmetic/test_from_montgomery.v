@@ -10,7 +10,7 @@ module from_mont_tb;
     integer inter;
     integer i;
 
-    from_mont DUT(
+    from_montgomery DUT(
         .C(C),
         .result(Result)
     );
