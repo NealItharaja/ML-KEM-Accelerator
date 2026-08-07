@@ -2,6 +2,7 @@ version: "3.9"
 
 services:
   dev:
+    platform: linux/amd64
     build: .
     container_name: mlkem-dev
     working_dir: /workspace
