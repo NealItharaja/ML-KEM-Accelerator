@@ -7,6 +7,7 @@ LOGS := logs
 IVERILOG := iverilog
 VVP := vvp
 ALL_SRC := $(wildcard $(SRC)/*.v) $(wildcard $(SRC)/*/*.v)
+LIBRELANE_DIR ?= /opt/librelane
 
 prepare:
 	@mkdir -p $(BUILD)
@@ -122,8 +123,7 @@ kem: prepare
 
 synth: prepare
 	@echo "--- Starting LibreLane Synthesis Flow ---"
-
-	nix-shell --command "librelane config.json"
+	nix-shell $(LIBRELANE_DIR)/shell.nix --command "librelane config.json"
 
 all: arithmetic alu encoding hashing generation memory ntt kem
 	@echo "================================================="
