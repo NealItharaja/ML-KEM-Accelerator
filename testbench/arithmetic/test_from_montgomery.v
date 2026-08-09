@@ -17,7 +17,6 @@ module from_mont_tb;
 
     task check_result;
     begin
-
         m = (C * 3327) % 4096;
         inter = (C + m * 3329) / 4096;
 
@@ -48,31 +47,33 @@ module from_mont_tb;
     endtask
 
     initial begin
-
         $display("Beginning From Montgomery Tests");
         $display("-------------------------------");
 
-        C=0;      check_result();
-        C=1;      check_result();
-        C=2;      check_result();
-        C=767;    check_result();
-        C=1353;   check_result();
-        C=2048;   check_result();
-        C=3328;   check_result();
+        C=0;      
+        check_result();
+        C=1;      
+        check_result();
+        C=2;      
+        check_result();
+        C=767;    
+        check_result();
+        C=1353;   
+        check_result();
+        C=2048;   
+        check_result();
+        C=3328;   
+        check_result();
 
         for(i=0;i<1000;i=i+1) begin
-
             C = $random % 3329;
             if(C < 0)
                 C = -C;
-
             check_result();
-
         end
 
         $display("-------------------------------");
         $display("Simulation Finished");
-
         $finish;
     end
 endmodule

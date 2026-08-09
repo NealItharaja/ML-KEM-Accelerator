@@ -2,19 +2,19 @@
 
 // ALU: streamed poly/vector mod_add and mod_sub
 module test_alu;
+    reg clk;
+    reg reset;
+    reg start;
+    reg op;
+    reg [2:0] n_polys;
+    reg [11:0] a_in;
+    reg [11:0] b_in;
+    reg in_valid;
 
-    reg         clk;
-    reg         reset;
-    reg         start;
-    reg         op;
-    reg  [2:0]  n_polys;
-    reg  [11:0] a_in;
-    reg  [11:0] b_in;
-    reg         in_valid;
-    wire        ready;
+    wire ready;
     wire [11:0] c_out;
-    wire        out_valid;
-    wire        done;
+    wire out_valid;
+    wire done;
 
     integer i, errors, checks, ngot, ntotal;
     reg [11:0] a_mem [0:1023];
@@ -46,6 +46,7 @@ module test_alu;
         input [11:0] a;
         input [11:0] b;
         reg [12:0] s;
+
         begin
             s = a + b;
             if (s >= Q)
@@ -58,6 +59,7 @@ module test_alu;
     function [11:0] mod_sub_ref;
         input [11:0] a;
         input [11:0] b;
+        
         begin
             if (a >= b)
                 mod_sub_ref = a - b;

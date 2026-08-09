@@ -2,14 +2,11 @@
 `timescale 1ns/1ps
 
 module mod_add_tb;
-    // Inputs to the DUT
     reg  [11:0] A;
     reg  [11:0] B;
 
-    // Output from the DUT
     wire [11:0] Result;
 
-    // Instantiate the Device Under Test (DUT)
     mod_add DUT (
         .A(A),
         .B(B),
