@@ -1,9 +1,6 @@
 `timescale 1ns/1ps
 
-// Testbench for parameterized ByteEncode_d pack (default D=12).
-
 module test_pack;
-
     reg clk;
     reg start;
     reg [11:0] coeff_in;
@@ -15,12 +12,12 @@ module test_pack;
     wire done;
 
     integer i, j, b, errors, checks, nbytes;
-    reg [11:0] poly [0:255];
-    reg [7:0]  got_bytes [0:383];
-    reg [7:0]  exp_bytes [0:383];
-    reg        bits [0:3071];
 
-    // Default D=12
+    reg [11:0] poly [0:255];
+    reg [7:0] got_bytes [0:383];
+    reg [7:0] exp_bytes [0:383];
+    reg bits [0:3071];
+
     pack #(.D(12)) DUT(
         .clk(clk),
         .start(start),
@@ -32,11 +29,12 @@ module test_pack;
         .done(done)
     );
 
-    // Also check D=10 and D=4
     reg start10, cv10;
     reg [11:0] cin10;
+
     wire ready10, bv10, done10;
     wire [7:0] bout10;
+
     reg [7:0] got10 [0:319];
     reg [7:0] exp10 [0:319];
 
@@ -53,8 +51,10 @@ module test_pack;
 
     reg start4, cv4;
     reg [11:0] cin4;
+
     wire ready4, bv4, done4;
     wire [7:0] bout4;
+
     reg [7:0] got4 [0:127];
     reg [7:0] exp4 [0:127];
 
@@ -71,7 +71,6 @@ module test_pack;
 
     always #5 clk = ~clk;
 
-    // Golden ByteEncode_d into exp_bytes[0 .. 32*d-1]
     task golden_encode;
         input integer d;
         begin
@@ -104,7 +103,6 @@ module test_pack;
         end
     endtask
 
-    // Feed one coeff, wait until ready again (may emit bytes meanwhile)
     task push_coeff;
         input [11:0] c;
         begin
@@ -134,13 +132,13 @@ module test_pack;
         for (i = 0; i < 256; i = i + 1)
             poly[i] = (i * 7 + 13) % 3329;
 
-        // ---------------------------------------------------------------
         $display("================================");
         $display("Test 1: D=12 known pair as two coeffs");
         $display("================================");
-        // a=0x123, b=0xABC -> 23, C1, AB
+        
         poly[0] = 12'h123;
         poly[1] = 12'hABC;
+
         for (i = 2; i < 256; i = i + 1)
             poly[i] = 12'd0;
 
@@ -185,17 +183,17 @@ module test_pack;
         if (errors == 0)
             $display("PASS D=12 full poly (384 bytes)");
 
-        // ---------------------------------------------------------------
         $display("================================");
         $display("Test 2: D=10 full poly (320 bytes)");
         $display("================================");
+
         for (i = 0; i < 256; i = i + 1)
             poly[i] = (i * 7 + 13) & 10'h3FF;
 
-        // rebuild golden into exp10 via bits
         for (i = 0; i < 256; i = i + 1)
             for (j = 0; j < 10; j = j + 1)
                 bits[i*10 + j] = poly[i][j];
+
         for (b = 0; b < 320; b = b + 1) begin
             exp10[b] = 8'd0;
             for (j = 0; j < 8; j = j + 1)
@@ -243,16 +241,17 @@ module test_pack;
         if (errors == 0)
             $display("PASS D=10 full poly (320 bytes)");
 
-        // ---------------------------------------------------------------
         $display("================================");
         $display("Test 3: D=4 full poly (128 bytes)");
         $display("================================");
+
         for (i = 0; i < 256; i = i + 1)
             poly[i] = (i * 3 + 1) & 4'hF;
 
         for (i = 0; i < 256; i = i + 1)
             for (j = 0; j < 4; j = j + 1)
                 bits[i*4 + j] = poly[i][j];
+
         for (b = 0; b < 128; b = b + 1) begin
             exp4[b] = 8'd0;
             for (j = 0; j < 8; j = j + 1)
@@ -302,10 +301,11 @@ module test_pack;
 
         $display("--------------------------------");
         $display("Checked %0d, mismatches %0d", checks, errors);
-        if (errors == 0) $display("TEST PASSED");
-        else             $display("TEST FAILED");
+        if (errors == 0) 
+            $display("TEST PASSED");
+        else             
+            $display("TEST FAILED");
         $display("--------------------------------");
         $finish;
     end
-
 endmodule

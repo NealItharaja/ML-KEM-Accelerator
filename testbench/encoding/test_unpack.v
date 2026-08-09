@@ -1,9 +1,6 @@
 `timescale 1ns/1ps
 
-// Testbench for parameterized ByteDecode_d unpack (default D=12).
-
 module test_unpack;
-
     reg clk;
     reg start;
     reg [7:0] byte_in;
@@ -15,10 +12,11 @@ module test_unpack;
     wire done;
 
     integer i, j, b, errors, checks;
+
     reg [11:0] poly [0:255];
     reg [11:0] got_poly [0:255];
-    reg [7:0]  bytes [0:383];
-    reg        bits [0:3071];
+    reg [7:0] bytes [0:383];
+    reg bits [0:3071];
 
     unpack #(.D(12)) DUT(
         .clk(clk),
@@ -33,11 +31,13 @@ module test_unpack;
 
     reg start10, bv10;
     reg [7:0] bin10;
+
     wire ready10, cv10, done10;
     wire [11:0] cout10;
+
     reg [11:0] poly10 [0:255];
     reg [11:0] got10 [0:255];
-    reg [7:0]  bytes10 [0:319];
+    reg [7:0] bytes10 [0:319];
 
     unpack #(.D(10)) DUT10(
         .clk(clk),
@@ -79,7 +79,6 @@ module test_unpack;
         errors = 0;
         checks = 0;
 
-        // ---------------------------------------------------------------
         $display("================================");
         $display("Test 1: D=12 golden + full unpack");
         $display("================================");
@@ -89,11 +88,13 @@ module test_unpack;
 
         golden_encode(12);
 
-        // sanity on first triple
         checks = checks + 3;
+
         if (bytes[0] !== ((poly[0]) & 8'hFF)) begin
             errors = errors + 1; $display("FAIL golden byte0");
-        end else $display("PASS golden byte0 = %02h", bytes[0]);
+        end 
+        else 
+            $display("PASS golden byte0 = %02h", bytes[0]);
 
         @(negedge clk); start = 1; @(negedge clk); start = 0;
 
@@ -136,7 +137,6 @@ module test_unpack;
         if (errors == 0)
             $display("PASS D=12 full poly unpack");
 
-        // ---------------------------------------------------------------
         $display("================================");
         $display("Test 2: D=10 full unpack");
         $display("================================");
@@ -197,10 +197,11 @@ module test_unpack;
 
         $display("--------------------------------");
         $display("Checked %0d, mismatches %0d", checks, errors);
-        if (errors == 0) $display("TEST PASSED");
-        else             $display("TEST FAILED");
+        if (errors == 0) 
+            $display("TEST PASSED");
+        else             
+            $display("TEST FAILED");
         $display("--------------------------------");
         $finish;
     end
-
 endmodule
