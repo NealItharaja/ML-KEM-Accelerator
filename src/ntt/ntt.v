@@ -85,7 +85,7 @@ module ntt256(
         .done(done)
     );
 
-    coeff_ram memory(
+    coeff_ram_sram memory(
         .clk(clk),
         .rd_en(ram_rd_en),
         .wr_en(ram_wr_en),

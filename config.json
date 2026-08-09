@@ -17,7 +17,7 @@
     "dir::./src/ntt/ntt.v",
     "dir::./src/ntt/intt.v",
     "dir::./src/memory/address_gen.v",
-    "dir::./src/memory/coeff_ram.v",
+    "dir::./src/memory/coeff_ram_sram.v",
     "dir::./src/memory/twiddle_rom.v",
     "dir::./src/hashing/keccack.v",
     "dir::./src/hashing/shake128.v",
@@ -53,6 +53,19 @@
   "SYNTH_STRATEGY": "AREA 0",
 
   "VERILOG_INCLUDE_DIRS": [
-    "dir::./src/memory"
+    "dir::./src/memory",
+    "dir::./src/macros"
+  ],
+
+  "VERILOG_FILES_BLACKBOX": [
+    "dir::./src/macros/sky130_sram_1kbyte_1rw1r_32x256_8.v"
+  ],
+  
+  "EXTRA_LEFS": [
+    "dir::./src/macros/sky130_sram_1kbyte_1rw1r_32x256_8.lef"
+  ],
+
+  "EXTRA_LIBS": [
+    "dir::./src/macros/sky130_sram_1kbyte_1rw1r_32x256_8_TT_1p8V_25C.lib"
   ]
 }
