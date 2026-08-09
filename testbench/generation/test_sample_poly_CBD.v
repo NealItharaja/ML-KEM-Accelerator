@@ -1,23 +1,23 @@
 `timescale 1ns/1ps
 
-// SamplePolyCBD_eta vs hashlib.shake_256 + CBD golden hex vectors
 module test_sample_poly_CBD;
-
-    reg         clk;
-    reg         reset;
-    reg         start2;
-    reg         start3;
+    reg clk;
+    reg reset;
+    reg start2;
+    reg start3;
     reg [255:0] seed;
-    reg [7:0]   nonce;
+    reg [7:0] nonce;
+
     wire [11:0] coeff_out2;
-    wire        coeff_valid2;
-    wire        done2;
+    wire coeff_valid2;
+    wire done2;
     wire [11:0] coeff_out3;
-    wire        coeff_valid3;
-    wire        done3;
+    wire coeff_valid3;
+    wire done3;
 
     integer k, errors, checks, ngot, which;
-    reg [11:0] got  [0:255];
+
+    reg [11:0] got [0:255];
     reg [11:0] exp2 [0:255];
     reg [11:0] exp3 [0:255];
     reg [8*64-1:0] name;
@@ -130,6 +130,7 @@ module test_sample_poly_CBD;
         $display("================================");
         $display("Test 1: CBD eta=2, seed=0, nonce=0");
         $display("================================");
+
         name = "cbd2_seed0_n0";
         which = 2;
         run_sample2;
@@ -138,6 +139,7 @@ module test_sample_poly_CBD;
         $display("================================");
         $display("Test 2: CBD eta=3, seed=0, nonce=0");
         $display("================================");
+
         name = "cbd3_seed0_n0";
         which = 3;
         run_sample3;
@@ -145,10 +147,11 @@ module test_sample_poly_CBD;
 
         $display("--------------------------------");
         $display("Checked %0d, mismatches %0d", checks, errors);
-        if (errors == 0) $display("TEST PASSED");
-        else             $display("TEST FAILED");
+        if (errors == 0) 
+            $display("TEST PASSED");
+        else             
+            $display("TEST FAILED");
         $display("--------------------------------");
         $finish;
     end
-
 endmodule

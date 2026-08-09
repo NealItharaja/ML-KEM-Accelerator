@@ -1,21 +1,21 @@
 `timescale 1ns/1ps
 
-// SHA3-256 reference vectors (hashlib.sha3_256)
 module test_sha3_256;
-
     reg clk;
     reg reset;
     reg start;
     reg [7:0] din;
     reg din_valid;
     reg din_last;
-    wire ready;
     reg squeeze;
+
+    wire ready;
     wire [7:0] dout;
     wire dout_valid;
     wire absorb_done;
 
     integer errors, checks;
+
     reg [7:0] got [0:31];
     reg [7:0] exp [0:31];
     reg [7:0] msg [0:255];
@@ -131,6 +131,7 @@ module test_sha3_256;
         $display("================================");
         $display("Test 1: empty message");
         $display("================================");
+
         name = "empty";
         load_hex(256'ha7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a);
         absorb_n(0);
@@ -140,6 +141,7 @@ module test_sha3_256;
         $display("================================");
         $display("Test 2: \"abc\"");
         $display("================================");
+
         name = "abc";
         load_hex(256'h3a985da74fe225b2045c172d6bd390bd855f086e3e9d525b46bfe24511431532);
         msg[0] = 8'h61;
@@ -152,6 +154,7 @@ module test_sha3_256;
         $display("================================");
         $display("Test 3: 00 01 02");
         $display("================================");
+
         name = "00_01_02";
         load_hex(256'h1186d49a4ad620618f760f29da2c593b2ec2cc2ced69dc16817390d861e62253);
         msg[0] = 8'h00;
@@ -163,10 +166,11 @@ module test_sha3_256;
 
         $display("--------------------------------");
         $display("Checked %0d, mismatches %0d", checks, errors);
-        if (errors == 0) $display("TEST PASSED");
-        else             $display("TEST FAILED");
+        if (errors == 0) 
+            $display("TEST PASSED");
+        else             
+            $display("TEST FAILED");
         $display("--------------------------------");
         $finish;
     end
-
 endmodule

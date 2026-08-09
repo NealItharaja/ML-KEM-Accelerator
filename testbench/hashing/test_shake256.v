@@ -1,21 +1,21 @@
 `timescale 1ns/1ps
 
-// SHAKE256 reference vectors (32-byte digests from hashlib.shake_256)
 module test_shake256;
-
     reg clk;
     reg reset;
     reg start;
     reg [7:0] din;
     reg din_valid;
     reg din_last;
-    wire ready;
     reg squeeze;
+
+    wire ready;
     wire [7:0] dout;
     wire dout_valid;
     wire absorb_done;
 
     integer errors, checks;
+
     reg [7:0] got [0:31];
     reg [7:0] exp [0:31];
     reg [7:0] msg [0:255];
@@ -131,6 +131,7 @@ module test_shake256;
         $display("================================");
         $display("Test 1: empty message");
         $display("================================");
+
         name = "empty";
         load_hex(256'h46b9dd2b0ba88d13233b3feb743eeb243fcd52ea62b81b82b50c27646ed5762f);
         absorb_n(0);
@@ -140,6 +141,7 @@ module test_shake256;
         $display("================================");
         $display("Test 2: \"abc\"");
         $display("================================");
+
         name = "abc";
         load_hex(256'h483366601360a8771c6863080cc4114d8db44530f8f1e1ee4f94ea37e78b5739);
         msg[0] = 8'h61;
@@ -152,6 +154,7 @@ module test_shake256;
         $display("================================");
         $display("Test 3: 00 01 02");
         $display("================================");
+
         name = "00_01_02";
         load_hex(256'h714501167ead924ea87e422993eea1e67df0ead7b93140c1109470fb66d50aaa);
         msg[0] = 8'h00;
@@ -163,10 +166,11 @@ module test_shake256;
 
         $display("--------------------------------");
         $display("Checked %0d, mismatches %0d", checks, errors);
-        if (errors == 0) $display("TEST PASSED");
-        else             $display("TEST FAILED");
+        if (errors == 0) 
+            $display("TEST PASSED");
+        else             
+            $display("TEST FAILED");
         $display("--------------------------------");
         $finish;
     end
-
 endmodule

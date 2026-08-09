@@ -1,21 +1,21 @@
 `timescale 1ns/1ps
 
-// SHAKE128 reference vectors (32-byte digests from hashlib.shake_128)
 module test_shake128;
+    reg clk;
+    reg reset;
+    reg start;
+    reg [7:0] din;
+    reg din_valid;
+    reg din_last;
+    reg squeeze;
 
-    reg        clk;
-    reg        reset;
-    reg        start;
-    reg [7:0]  din;
-    reg        din_valid;
-    reg        din_last;
-    wire       ready;
-    reg        squeeze;
+    wire ready;
     wire [7:0] dout;
-    wire       dout_valid;
-    wire       absorb_done;
+    wire dout_valid;
+    wire absorb_done;
 
     integer i, errors, checks;
+
     reg [7:0] got [0:31];
     reg [7:0] exp [0:31];
     reg [7:0] msg [0:255];
@@ -128,20 +128,20 @@ module test_shake128;
         #20;
         reset = 0;
 
-        // "" -> 7f9c2ba4e88f827d616045507605853ed73b8093f6efbc88eb1a6eacfa66ef26
         $display("================================");
         $display("Test 1: empty message");
         $display("================================");
+
         name = "empty";
         load_hex(256'h7f9c2ba4e88f827d616045507605853ed73b8093f6efbc88eb1a6eacfa66ef26);
         absorb_n(0);
         squeeze_n(32);
         check_digest;
 
-        // "abc" -> 5881092dd818bf5cf8a3ddb793fbcba74097d5c526a6d35f97b83351940f2cc8
         $display("================================");
         $display("Test 2: \"abc\"");
         $display("================================");
+
         name = "abc";
         load_hex(256'h5881092dd818bf5cf8a3ddb793fbcba74097d5c526a6d35f97b83351940f2cc8);
         msg[0] = 8'h61;
@@ -151,10 +151,10 @@ module test_shake128;
         squeeze_n(32);
         check_digest;
 
-        // \x00\x01\x02 -> 203d4b7543731ad58bce7697b39a48eafc4fee548891d1cf94bffd231022a896
         $display("================================");
         $display("Test 3: 00 01 02");
         $display("================================");
+
         name = "00_01_02";
         load_hex(256'h203d4b7543731ad58bce7697b39a48eafc4fee548891d1cf94bffd231022a896);
         msg[0] = 8'h00;
@@ -166,10 +166,11 @@ module test_shake128;
 
         $display("--------------------------------");
         $display("Checked %0d, mismatches %0d", checks, errors);
-        if (errors == 0) $display("TEST PASSED");
-        else             $display("TEST FAILED");
+        if (errors == 0) 
+            $display("TEST PASSED");
+        else             
+            $display("TEST FAILED");
         $display("--------------------------------");
         $finish;
     end
-
 endmodule

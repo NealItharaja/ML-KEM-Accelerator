@@ -1,20 +1,20 @@
 `timescale 1ns/1ps
 
-// SampleNTT vs hashlib.shake_128 + Parse golden hex vectors
 module test_sample_ntt;
-
-    reg         clk;
-    reg         reset;
-    reg         start;
+    reg clk;
+    reg reset;
+    reg start;
     reg [255:0] rho;
-    reg [7:0]   i;
-    reg [7:0]   j;
+    reg [7:0] i;
+    reg [7:0] j;
+
     wire [11:0] coeff_out;
-    wire        coeff_valid;
-    wire        done;
+    wire coeff_valid;
+    wire done;
 
     integer k, errors, checks, ngot, which;
-    reg [11:0] got  [0:255];
+
+    reg [11:0] got [0:255];
     reg [11:0] exp0 [0:255];
     reg [11:0] exp1 [0:255];
     reg [8*64-1:0] name;
@@ -97,6 +97,7 @@ module test_sample_ntt;
         $display("================================");
         $display("Test 1: rho=0, i=0, j=0");
         $display("================================");
+
         name = "rho0_i0_j0";
         which = 0;
         i = 8'd0;
@@ -107,6 +108,7 @@ module test_sample_ntt;
         $display("================================");
         $display("Test 2: rho=0, i=1, j=2");
         $display("================================");
+
         name = "rho0_i1_j2";
         which = 1;
         i = 8'd1;
@@ -116,10 +118,12 @@ module test_sample_ntt;
 
         $display("--------------------------------");
         $display("Checked %0d, mismatches %0d", checks, errors);
-        if (errors == 0) $display("TEST PASSED");
-        else             $display("TEST FAILED");
+
+        if (errors == 0) 
+            $display("TEST PASSED");
+        else             
+            $display("TEST FAILED");
         $display("--------------------------------");
         $finish;
     end
-
 endmodule

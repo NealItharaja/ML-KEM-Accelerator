@@ -1,20 +1,16 @@
 #!/usr/bin/env python3
-"""Dump visible ML-KEM-512/768/1024 vectors for HW bring-up compare."""
-import os
-import sys
-
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# Dump visible ML-KEM-512/768/1024 vectors for compare
+import os, sys
 from mlkem_ref import keygen, encaps, decaps
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 os.makedirs(os.path.join(os.path.dirname(__file__), "dumps"), exist_ok=True)
-
 
 def coins():
     d = bytes([i for i in range(32)])
     z = bytes([255 - i for i in range(32)])
     m = bytes([(i * 3) & 0xFF for i in range(32)])
     return d, z, m
-
 
 def main():
     d, z, m = coins()
@@ -23,6 +19,7 @@ def main():
         ct, ss = encaps(pk, m, level)
         ss2 = decaps(sk, ct, level)
         path = os.path.join(os.path.dirname(__file__), "dumps", f"ref_{level}.txt")
+        
         with open(path, "w") as f:
             f.write(f"LEVEL={level}\n")
             f.write(f"D={d.hex()}\n")

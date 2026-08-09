@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-ML-KEM reference matching this repo's Montgomery NTT/INTT datapath.
-Levels: 512 (k=2), 768 (k=3), 1024 (k=4). FIPS 203 CCA with FO.
+ML-KEM reference
 
 Usage:
   python mlkem_ref.py --selftest
   python mlkem_ref.py --level 512 --d <64hex> --z <64hex> --m <64hex>
 """
+
 from __future__ import annotations
 
 import argparse
@@ -18,7 +18,7 @@ MOD = 3329
 N = 256
 R2 = 1353
 N_PRIME = 3327
-F_SCALE = 512  # R/128 for this montgomery.v
+F_SCALE = 512
 
 PARAMS = {
     512: dict(k=2, eta1=3, eta2=2, du=10, dv=4),
@@ -48,6 +48,7 @@ def from_mont(a: int) -> int:
 def _load_zetas():
     here = os.path.dirname(os.path.abspath(__file__))
     path = os.path.join(here, "..", "..", "src", "memory", "twiddle.mem")
+
     with open(path) as f:
         return [int(x, 16) for x in f.read().split()]
 
@@ -56,10 +57,11 @@ ZETAS = _load_zetas()
 
 
 def ntt(a: list[int]) -> list[int]:
-    """Forward Kyber NTT; coeffs must already be Montgomery-domain."""
+    # Coeffs must already be Montgomery-domain
     r = a[:]
     k = 1
     length = 128
+
     while length >= 2:
         start = 0
         while start < N:
@@ -75,10 +77,10 @@ def ntt(a: list[int]) -> list[int]:
 
 
 def intt(a: list[int]) -> list[int]:
-    """Inverse NTT + scale by F=512 (matches intt.v)."""
     r = a[:]
     k = 127
     length = 2
+
     while length <= 128:
         start = 0
         while start < N:
@@ -99,11 +101,13 @@ def sample_ntt(rho: bytes, x: int, y: int) -> list[int]:
     data = hashlib.shake_128(rho + bytes([x, y])).digest(8000)
     coeffs = []
     idx = 0
+
     while len(coeffs) < N:
         b0, b1, b2 = data[idx], data[idx + 1], data[idx + 2]
         idx += 3
         d1 = b0 + 256 * (b1 & 0x0F)
         d2 = (b1 >> 4) + 16 * b2
+
         if d1 < MOD:
             coeffs.append(d1)
         if len(coeffs) < N and d2 < MOD:
@@ -114,10 +118,12 @@ def sample_ntt(rho: bytes, x: int, y: int) -> list[int]:
 def sample_cbd(eta: int, seed: bytes, nonce: int) -> list[int]:
     B = hashlib.shake_256(seed + bytes([nonce])).digest(64 * eta)
     bits = []
+
     for byte in B:
         for t in range(8):
             bits.append((byte >> t) & 1)
     out = []
+
     for i in range(N):
         x = sum(bits[2 * i * eta + j] for j in range(eta))
         y = sum(bits[2 * i * eta + eta + j] for j in range(eta))
@@ -126,8 +132,8 @@ def sample_cbd(eta: int, seed: bytes, nonce: int) -> list[int]:
 
 
 def basemul_poly(a: list[int], b: list[int]) -> list[int]:
-    """Pointwise mul in NTT domain (Mont)."""
     r = [0] * N
+
     for i in range(N // 4):
         zeta = ZETAS[64 + i]
         a0, a1 = a[4 * i], a[4 * i + 1]
@@ -162,10 +168,12 @@ def byte_encode(poly: list[int], d: int) -> bytes:
     buf = 0
     nbits = 0
     out = bytearray()
+
     for c in poly:
         v = c & ((1 << d) - 1)
         buf |= v << nbits
         nbits += d
+
         while nbits >= 8:
             out.append(buf & 0xFF)
             buf >>= 8
@@ -180,6 +188,7 @@ def byte_decode(data: bytes, d: int) -> list[int]:
     buf = 0
     nbits = 0
     idx = 0
+
     while len(coeffs) < N:
         while nbits < d:
             buf |= data[idx] << nbits
@@ -212,17 +221,16 @@ def poly_from_mont(p):
 
 
 def ntt_normal(p):
-    """normal -> Mont -> NTT (Mont NTT domain)."""
     return ntt(poly_to_mont(p))
 
 
 def intt_normal(p):
-    """Mont NTT domain -> INTT -> from_mont -> normal."""
     return poly_from_mont(intt(p))
 
 
 def matvec_ntt(A, s, k):
     t = [[0] * N for _ in range(k)]
+
     for i in range(k):
         acc = [0] * N
         for j in range(k):
@@ -239,13 +247,12 @@ def k_pke_keygen(d: bytes, level: int):
     s = [ntt_normal(sample_cbd(eta1, sigma, i)) for i in range(k)]
     e = [ntt_normal(sample_cbd(eta1, sigma, i + k)) for i in range(k)]
     A = [[None] * k for _ in range(k)]
+
     for i in range(k):
         for j in range(k):
-            # FIPS: SampleNTT(ρ || j || i); already NTT-domain (normal ints)
             A[i][j] = poly_to_mont(sample_ntt(rho, j, i))
     t = matvec_ntt(A, s, k)
     t = [poly_add(t[i], e[i]) for i in range(k)]
-    # Encode public t from Montgomery NTT domain -> normal for ByteEncode
     t_enc = [poly_from_mont(t[i]) for i in range(k)]
     s_enc = [poly_from_mont(s[i]) for i in range(k)]
     pk = b"".join(byte_encode(t_enc[i], 12) for i in range(k)) + rho
@@ -263,14 +270,14 @@ def k_pke_encrypt(pk: bytes, m: bytes, r_coins: bytes, level: int):
     r = [ntt_normal(sample_cbd(eta1, r_coins, i)) for i in range(k)]
     e1 = [sample_cbd(eta2, r_coins, i + k) for i in range(k)]
     e2 = sample_cbd(eta2, r_coins, 2 * k)
-    # u = INTT(A^T * r) + e1
     At = [[A[j][i] for j in range(k)] for i in range(k)]
     u_hat = matvec_ntt(At, r, k)
     u = [poly_add(intt_normal(u_hat[i]), e1[i]) for i in range(k)]
-    # v = INTT(t·r) + e2 + decompress(m)
     v_acc = [0] * N
+
     for i in range(k):
         v_acc = poly_add(v_acc, basemul_poly(t[i], r[i]))
+
     v = poly_add(intt_normal(v_acc), e2)
     mu = byte_decode(m, 1)
     mu = [decompress(x, 1) for x in mu]
@@ -288,15 +295,19 @@ def k_pke_decrypt(sk_pke: bytes, ct: bytes, level: int):
     c1, c2 = ct[:c1_len], ct[c1_len:]
     u = []
     step = 32 * du
+
     for i in range(k):
         comp = byte_decode(c1[step * i : step * (i + 1)], du)
         u.append([decompress(c, du) for c in comp])
+
     v_comp = byte_decode(c2, dv)
     v = [decompress(c, dv) for c in v_comp]
     u_hat = [ntt_normal(u[i]) for i in range(k)]
     acc = [0] * N
+
     for i in range(k):
         acc = poly_add(acc, basemul_poly(s[i], u_hat[i]))
+
     w = poly_sub(v, intt_normal(acc))
     return byte_encode([compress(c, 1) for c in w], 1)
 
@@ -312,9 +323,6 @@ def encaps(pk: bytes, m: bytes, level: int):
     K_bar_r = G(m + H(pk))
     K_bar, r = K_bar_r[:32], K_bar_r[32:]
     ct = k_pke_encrypt(pk, m, r, level)
-    # ML-KEM shared secret = K_bar (FIPS 203); some drafts used H(K_bar||H(ct))
-    # FIPS 203: K = K_bar directly after successful path; actually:
-    # Shared key is first 32 bytes of G output (K) in ML-KEM.
     return ct, K_bar
 
 
@@ -330,6 +338,7 @@ def decaps(sk: bytes, ct: bytes, level: int):
     Kr = G(m_prime + h)
     K_bar, r_prime = Kr[:32], Kr[32:]
     ct_prime = k_pke_encrypt(pk, m_prime, r_prime, level)
+
     if ct_prime == ct:
         return K_bar
     return J(z + ct)
@@ -337,7 +346,6 @@ def decaps(sk: bytes, ct: bytes, level: int):
 
 def selftest() -> bool:
     ok = True
-    # NTT roundtrip sanity
     seq = [(i * 7 + 13) % MOD for i in range(N)]
     rt = intt_normal(ntt_normal(seq))
     if rt != seq:
