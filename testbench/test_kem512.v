@@ -1,27 +1,35 @@
 `timescale 1ns/1ps
 
-// Fast bring-up: ML-KEM-512 keygen -> encaps -> decaps only
 module test_kem512;
-
     reg clk, reset, start;
     reg [1:0] mode;
     reg [255:0] d_seed, z_seed, m_msg;
+    reg [255:0] got_be;
 
     wire [255:0] ss;
     wire done, ok;
     wire [15:0] status;
 
     integer t, errors, checks, b;
-    reg [255:0] got_be;
 
-    localparam [255:0] EXP_SS =
-        256'h6164b413348f21a5d49b561f18add239a373388ffd8ccd4650b3a11fafbfe553;
+    localparam [255:0] EXP_SS = 256'h6164b413348f21a5d49b561f18add239a373388ffd8ccd4650b3a11fafbfe553;
 
-    kem #(.LEVEL(512)) dut (
-        .clk(clk), .reset(reset), .start(start), .mode(mode),
-        .d_seed(d_seed), .z_seed(z_seed), .m_msg(m_msg),
-        .din(8'd0), .din_valid(1'b0), .din_last(1'b0), .din_sel(2'd0),
-        .ss_out(ss), .done(done), .decaps_ok(ok), .status(status)
+    kem #(.LEVEL(512)) dut(
+        .clk(clk),
+        .reset(reset),
+        .start(start),
+        .mode(mode),
+        .d_seed(d_seed),
+        .z_seed(z_seed),
+        .m_msg(m_msg),
+        .din(8'd0),
+        .din_valid(1'b0),
+        .din_last(1'b0),
+        .din_sel(2'd0),
+        .ss_out(ss),
+        .done(done),
+        .decaps_ok(ok),
+        .status(status)
     );
 
     always #5 clk = ~clk;
@@ -31,7 +39,6 @@ module test_kem512;
         $fflush;
     end
 
-    // progress heartbeat
     initial begin
         forever begin
             #1_000_000;
@@ -47,6 +54,7 @@ module test_kem512;
         mode = 0;
         errors = 0;
         checks = 0;
+
         for (t = 0; t < 32; t = t + 1) begin
             d_seed[8*t +: 8] = t[7:0];
             z_seed[8*t +: 8] = 8'd255 - t[7:0];
@@ -71,6 +79,7 @@ module test_kem512;
         @(negedge clk); start = 1;
         @(negedge clk); start = 0;
         wait (done);
+
         for (b = 0; b < 32; b = b + 1)
             got_be[8*(31-b) +: 8] = ss[8*b +: 8];
         checks = checks + 1;

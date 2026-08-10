@@ -1,46 +1,43 @@
 // Integrated Memory Pipeline Testbench for Kyber NTT
-
 `timescale 1ns / 1ps
 
 module ntt_memory_pipeline_tb;
-
-    localparam integer L = 4;   // must match the AG PIPE_LATENCY below
+    // Must match the AG PIPE_LATENCY below
+    localparam integer L = 4;
 
     reg clk;
     reg reset;
     reg start;
+    reg finished;
+    reg [7:0] idx;
+    reg [11:0] got;
+    reg [11:0] expected_twiddle [0:127];
+    reg [11:0] exp [0:255];
+    reg [11:0] a_dly [0:L-2];
+    reg [11:0] b_dly [0:L-2];
+    reg rd_en_d;
+    reg [7:0] rd_a_d, rd_b_d;
+    reg [6:0] tw_d;
 
-    // Address generator streams
-    wire        rd_en;
-    wire [7:0]  rd_addr_a, rd_addr_b;
-    wire [6:0]  twiddle_addr;
-    wire        wr_en;
-    wire [7:0]  wr_addr_a, wr_addr_b;
-    wire        done;
-
-    // Memory / ROM data
+    wire rd_en;
+    wire [7:0] rd_addr_a, rd_addr_b;
+    wire [6:0] twiddle_addr;
+    wire wr_en;
+    wire [7:0] wr_addr_a, wr_addr_b;
+    wire done;
     wire [11:0] rd_data_a, rd_data_b;
     wire [11:0] twiddle_factor;
+    wire [11:0] wr_data_a = a_dly[L-2];
+    wire [11:0] wr_data_b = b_dly[L-2];
 
-    // Verification counters and golden data
     integer pass_count = 0;
     integer fail_count = 0;
-    integer rd_count   = 0;
-    integer wr_count   = 0;
-    integer cyc        = 0;
+    integer rd_count = 0;
+    integer wr_count = 0;
+    integer cyc = 0;
     integer i;
     integer t;
     integer d;
-    reg     finished;
-    reg [7:0]  idx;
-    reg [11:0] got;
-
-    reg [11:0] expected_twiddle [0:127];
-    reg [11:0] exp [0:255];
-
-    // =========================================================================
-    // MODULE INSTANTIATIONS
-    // =========================================================================
 
     address_gen #(.PIPE_LATENCY(L)) AG (
         .clk(clk),
@@ -56,22 +53,16 @@ module ntt_memory_pipeline_tb;
         .done(done)
     );
 
-    // Identity "butterfly": delay read data by PIPE_LATENCY-1 cycles so it lines
-    // up with the generator's delayed write strobe and addresses.
-    reg [11:0] a_dly [0:L-2];
-    reg [11:0] b_dly [0:L-2];
     always @(posedge clk) begin
         a_dly[0] <= rd_data_a;
         b_dly[0] <= rd_data_b;
+
         for (d = 1; d <= L-2; d = d + 1) begin
             a_dly[d] <= a_dly[d-1];
             b_dly[d] <= b_dly[d-1];
         end
     end
-    wire [11:0] wr_data_a = a_dly[L-2];
-    wire [11:0] wr_data_b = b_dly[L-2];
 
-    // Single 2-bank RAM (its internal crossbar handles operand routing).
     coeff_ram RAM (
         .clk(clk),
         .rd_en(rd_en),
@@ -92,64 +83,54 @@ module ntt_memory_pipeline_tb;
         .data(twiddle_factor)
     );
 
-    // 1-cycle-delayed copies of the read stream, aligned with the returned
-    // read data / twiddle factor (which have 1-cycle latency).
-    reg        rd_en_d;
-    reg [7:0]  rd_a_d, rd_b_d;
-    reg [6:0]  tw_d;
     always @(posedge clk) begin
         rd_en_d <= rd_en;
-        rd_a_d  <= rd_addr_a;
-        rd_b_d  <= rd_addr_b;
-        tw_d    <= twiddle_addr;
+        rd_a_d <= rd_addr_a;
+        rd_b_d <= rd_addr_b;
+        tw_d <= twiddle_addr;
     end
 
-    // Clock: 100 MHz (10ns period)
+    // 100 MHz
     always #5 clk = ~clk;
-
-    // =========================================================================
-    // TEST PROCEDURE
-    // =========================================================================
 
     initial begin
         clk = 0;
         reset = 1;
         start = 0;
 
-        // Golden twiddle ROM contents
         $readmemh("src/memory/twiddle.mem", expected_twiddle);
 
-        // -----------------------------------------------------------------
-        // STEP 1: Preload 256 coefficients (poly[i] = i*5 + 1) into the banks
-        // -----------------------------------------------------------------
         $display("=================================================");
         $display("Step 1: Preloading 256 coefficients into coeff_ram");
         $display("=================================================");
+
         for (i = 0; i < 256; i = i + 1) begin
             idx    = i[7:0];
             exp[i] = idx * 12'h005 + 12'h001;
-            if (^idx) RAM.bank1[i >> 1] = exp[i];   // odd parity  -> bank1
-            else      RAM.bank0[i >> 1] = exp[i];   // even parity -> bank0
+            if (^idx)
+                RAM.bank1[i >> 1] = exp[i];   // odd parity goes to bank1
+            else
+                RAM.bank0[i >> 1] = exp[i];   // even parity goes to bank0
         end
 
-        // -----------------------------------------------------------------
-        // STEP 2: Release reset & start the generator/pipeline
-        // -----------------------------------------------------------------
         $display("=================================================");
         $display("Step 2: Starting address generator & memory pipeline");
         $display("=================================================");
-        @(posedge clk); #1;
+
+        @(posedge clk);
+        #1;
         reset = 0;
-        @(posedge clk); #1;
+
+        @(posedge clk);
+        #1;
         start = 1;
-        @(posedge clk); #1;
+
+        @(posedge clk);
+        #1;
         start = 0;
 
-        // -----------------------------------------------------------------
-        // STEP 3: Stream and check until done (check-then-advance so the first
-        // read cycle is not skipped)
-        // -----------------------------------------------------------------
         finished = 0;
+
         while (!finished && cyc < 6000) begin
             if (rd_en) begin
                 rd_count = rd_count + 1;
@@ -161,28 +142,28 @@ module ntt_memory_pipeline_tb;
                 end
             end
 
-            if (wr_en) wr_count = wr_count + 1;
+            if (wr_en)
+                wr_count = wr_count + 1;
 
-            // One cycle after a read was issued, its data/twiddle are valid.
             if (rd_en_d) begin
-                if (rd_data_a === exp[rd_a_d]) pass_count = pass_count + 1;
+                if (rd_data_a === exp[rd_a_d])
+                    pass_count = pass_count + 1;
                 else begin
-                    $display("FAIL [coeff_ram A]: addr=%0d Expected=%03h Got=%03h",
-                             rd_a_d, exp[rd_a_d], rd_data_a);
+                    $display("FAIL [coeff_ram A]: addr=%0d Expected=%03h Got=%03h", rd_a_d, exp[rd_a_d], rd_data_a);
                     fail_count = fail_count + 1;
                 end
 
-                if (rd_data_b === exp[rd_b_d]) pass_count = pass_count + 1;
+                if (rd_data_b === exp[rd_b_d])
+                    pass_count = pass_count + 1;
                 else begin
-                    $display("FAIL [coeff_ram B]: addr=%0d Expected=%03h Got=%03h",
-                             rd_b_d, exp[rd_b_d], rd_data_b);
+                    $display("FAIL [coeff_ram B]: addr=%0d Expected=%03h Got=%03h", rd_b_d, exp[rd_b_d], rd_data_b);
                     fail_count = fail_count + 1;
                 end
 
-                if (twiddle_factor === expected_twiddle[tw_d]) pass_count = pass_count + 1;
+                if (twiddle_factor === expected_twiddle[tw_d])
+                    pass_count = pass_count + 1;
                 else begin
-                    $display("FAIL [twiddle ROM]: addr=%0d Expected=%03h Got=%03h",
-                             tw_d, expected_twiddle[tw_d], twiddle_factor);
+                    $display("FAIL [twiddle ROM]: addr=%0d Expected=%03h Got=%03h", tw_d, expected_twiddle[tw_d], twiddle_factor);
                     fail_count = fail_count + 1;
                 end
             end
@@ -194,18 +175,16 @@ module ntt_memory_pipeline_tb;
             end
         end
 
-        // Drain remaining write-backs
         for (t = 0; t < L + 3; t = t + 1) begin
             @(posedge clk); #1;
-            if (wr_en) wr_count = wr_count + 1;
+            if (wr_en)
+                wr_count = wr_count + 1;
         end
 
-        // -----------------------------------------------------------------
-        // STEP 4: Memory must be unchanged after an identity pass
-        // -----------------------------------------------------------------
         for (i = 0; i < 256; i = i + 1) begin
             idx = i[7:0];
             got = (^idx) ? RAM.bank1[i >> 1] : RAM.bank0[i >> 1];
+
             if (got === exp[i]) begin
                 pass_count = pass_count + 1;
             end else begin
@@ -214,9 +193,6 @@ module ntt_memory_pipeline_tb;
             end
         end
 
-        // -----------------------------------------------------------------
-        // STEP 5: Summary
-        // -----------------------------------------------------------------
         $display("=================================================");
         $display("INTEGRATED PIPELINE TEST SUMMARY");
         $display("Read pairs  = %0d (expected 1024)", rd_count);
@@ -229,8 +205,6 @@ module ntt_memory_pipeline_tb;
             $display("TEST PASSED");
         else
             $display("TEST FAILED");
-
         $finish;
     end
-
 endmodule

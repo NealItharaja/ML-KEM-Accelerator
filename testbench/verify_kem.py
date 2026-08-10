@@ -1,23 +1,12 @@
 #!/usr/bin/env python3
-"""
-Hardware Verification Helper for ML-KEM Top Module (kem.v).
-
-Computes golden test vectors and shared secrets (SS) for ML-KEM-512, 768, and 1024
-matching testbench/test_kem.v hardware configuration.
-
-Usage:
-  python testbench/verify_kem.py --all
-  python testbench/verify_kem.py --level 512
-"""
+#Hardware Verification Helper for ML-KEM Top Module (kem.v).
 
 import sys
+import mlkem_ref
 from pathlib import Path
 
-# Add repo root and testbench/kem to sys.path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "testbench" / "kem"))
-
-import mlkem_ref
 
 def get_default_coins():
     d = bytes([i for i in range(32)])

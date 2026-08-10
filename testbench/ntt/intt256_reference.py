@@ -1,13 +1,6 @@
-"""Reference ML-KEM (Kyber) inverse NTT, mod 3329, for cross-checking the hardware.
+#Reference ML-KEM (Kyber) inverse NTT, mod 3329, for cross-checking the hardware.
 
-Same flow as testbench/ntt/test_intt.v:
-  1. Build x[k] = (k*7 + 13) mod 3329
-  2. Forward NTT -> ntt_in  (this is what the hardware INTT is loaded with)
-  3. Inverse NTT with scale F = 512 (= R/128 for montgomery.v)
-
-Run:
-    python testbench/ntt/intt256_reference.py
-"""
+#Run: python testbench/ntt/intt256_reference.py
 
 import os
 
@@ -28,20 +21,21 @@ def fqmul(a, b):
 
 here = os.path.dirname(os.path.abspath(__file__))
 tw_path = os.path.join(here, "..", "..", "src", "memory", "twiddle.mem")
+
 with open(tw_path) as f:
     zetas = [int(x, 16) for x in f.read().split()]
 
 seq = [(k * 7 + 13) % MOD for k in range(N)]
-
-# Forward NTT (same as ntt256_reference.py / hardware NTT)
 r = seq[:]
 k = 1
 length = 128
+
 while length >= 2:
     start = 0
     while start < N:
         zeta = zetas[k]
         k += 1
+
         for j in range(start, start + length):
             t = fqmul(zeta, r[j + length])
             r[j + length] = (r[j] - t) % MOD
@@ -50,13 +44,13 @@ while length >= 2:
     length >>= 1
 
 ntt_in = r[:]
-
-# Inverse NTT (same schedule as address_gen inverse + butterfly_gs + xF)
 r = ntt_in[:]
 k = 127
 length = 2
+
 while length <= 128:
     start = 0
+
     while start < N:
         zeta = zetas[k]
         k -= 1

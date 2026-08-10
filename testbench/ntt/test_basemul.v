@@ -3,13 +3,13 @@
 // Testbench for Kyber basemul (degree-1 NTT-domain multiply).
 
 module test_basemul;
-
     reg clk;
     reg [11:0] a0, a1, b0, b1, twiddle;
+    reg [11:0] e0, e1;
+
     wire [11:0] r0, r1;
 
     integer errors, checks;
-    reg [11:0] e0, e1;
 
     localparam [11:0] Q = 12'd3329;
 
@@ -32,11 +32,13 @@ module test_basemul;
         reg [35:0] temp;
         reg [24:0] reduced;
         begin
-            m       = (T * 16'd3327) & 16'hFFFF;
-            temp    = T + (m * 16'd3329);
+            m = (T * 16'd3327) & 16'hFFFF;
+            temp = T + (m * 16'd3329);
             reduced = temp >> 16;
-            if (reduced >= 3329) mont = reduced - 3329;
-            else                 mont = reduced[11:0];
+            if (reduced >= 3329)
+                mont = reduced - 3329;
+            else
+                mont = reduced[11:0];
         end
     endfunction
 
@@ -54,8 +56,10 @@ module test_basemul;
         reg [12:0] s;
         begin
             s = x + y;
-            if (s >= Q) addmod = s - Q;
-            else        addmod = s[11:0];
+            if (s >= Q)
+                addmod = s - Q;
+            else
+                addmod = s[11:0];
         end
     endfunction
 
@@ -113,7 +117,6 @@ module test_basemul;
         $display("================================");
         $display("Test 2: Kyber-like values");
         $display("================================");
-        // twiddle = zetas[0] style Mont form (2285 = R mod q)
         check_pair(12'd17, 12'd42, 12'd99, 12'd123, 12'd2285, "sample A");
         check_pair(12'd3328, 12'd1, 12'd2, 12'd3327, 12'd2571, "sample B");
         check_pair(12'd1000, 12'd2000, 12'd3000, 12'd400, 12'd2970, "sample C");
@@ -122,22 +125,16 @@ module test_basemul;
         $display("Test 3: random sweep");
         $display("================================");
         for (i = 0; i < 64; i = i + 1) begin
-            check_pair(
-                (i * 17 + 3) % 3329,
-                (i * 41 + 5) % 3329,
-                (i * 13 + 7) % 3329,
-                (i * 29 + 11) % 3329,
-                (i * 53 + 2285) % 3329,
-                "rand"
-            );
+            check_pair((i * 17 + 3) % 3329, (i * 41 + 5) % 3329, (i * 13 + 7) % 3329, (i * 29 + 11) % 3329, (i * 53 + 2285) % 3329, "rand");
         end
 
         $display("--------------------------------");
         $display("Checked %0d, mismatches %0d", checks, errors);
-        if (errors == 0) $display("TEST PASSED");
-        else             $display("TEST FAILED");
+        if (errors == 0)
+            $display("TEST PASSED");
+        else
+            $display("TEST FAILED");
         $display("--------------------------------");
         $finish;
     end
-
 endmodule
