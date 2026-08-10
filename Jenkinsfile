@@ -3,12 +3,6 @@ pipeline {
         label 'linux'
     }
 
-    environment {
-        DESIGN_DIR = "src"
-        TB_DIR = "testbench"
-        TESTS = "kem"
-    }
-
     triggers {
         githubPush()
     }
@@ -31,9 +25,7 @@ pipeline {
 
     post {
         always {
-            archiveArtifacts artifacts: 'logs/*.log',
-                             fingerprint: true,
-                             allowEmptyArchive: true
+            archiveArtifacts artifacts: 'logs/*.log', fingerprint: true, allowEmptyArchive: true
         }
 
         success {
