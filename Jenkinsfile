@@ -23,29 +23,7 @@ pipeline {
         stage('Run Testbenches') {
             steps {
                 sh '''
-                mkdir -p build logs
-
-                for test in $TESTS
-                do
-                    echo "================================="
-                    echo "Running $test"
-                    echo "================================="
-
-                    rm -f build/$test.out
-
-                    iverilog \
-                        -o build/$test.out \
-                        ${DESIGN_DIR}/*.v src/*/*.v \
-                        ${TB_DIR}/test_${test}.v
-
-                    vvp build/$test.out > logs/${test}.log
-
-                    if grep -q "FAIL" logs/${test}.log
-                    then
-                        echo "$test FAILED"
-                        exit 1
-                    fi
-                done
+                make all
                 '''
             }
         }
