@@ -1,20 +1,20 @@
 `timescale 1ns/1ps
 
-// Golden-checked testbench for the inverse NTT.
-//
-// Loads a Kyber-NTT-domain vector (computed here with the same forward
-// schedule as test_ntt.v), runs the hardware INTT, and checks against a
-// software invntt. Also checks the round-trip INTT(NTT(x)) == x.
-
 module test_intt;
-
     reg clk;
     reg reset;
     reg start;
     reg load;
-    reg [7:0]  load_addr_a, load_addr_b;
+    reg [7:0] load_addr_a, load_addr_b;
     reg [11:0] load_data_a, load_data_b;
-    reg [7:0]  read_addr;
+    reg [7:0] read_addr;
+    reg [11:0] init_vec [0:255];
+    reg [11:0] ntt_vec [0:255];
+    reg [11:0] gmem [0:255];
+    reg [11:0] hw_out [0:255];
+    reg [11:0] tw [0:127];
+    reg [11:0] got;
+    reg [11:0] Tt, na, nb, t0;
 
     wire [11:0] read_data;
     wire done;
@@ -22,14 +22,6 @@ module test_intt;
     integer k, st, g, jj;
     integer d, gps, ai, bi, twi;
     integer errors, checks;
-
-    reg [11:0] init_vec [0:255];
-    reg [11:0] ntt_vec  [0:255];
-    reg [11:0] gmem     [0:255];
-    reg [11:0] hw_out   [0:255];
-    reg [11:0] tw       [0:127];
-    reg [11:0] got;
-    reg [11:0] Tt, na, nb, t0;
 
     localparam [11:0] Q = 12'd3329;
     localparam [11:0] F = 12'd512;   // R/128 for montgomery.v
@@ -56,11 +48,13 @@ module test_intt;
         reg [35:0] temp;
         reg [24:0] reduced;
         begin
-            m       = (T * 16'd3327) & 16'hFFFF;
-            temp    = T + (m * 16'd3329);
+            m = (T * 16'd3327) & 16'hFFFF;
+            temp = T + (m * 16'd3329);
             reduced = temp >> 16;
-            if (reduced >= 3329) mont = reduced - 3329;
-            else                 mont = reduced[11:0];
+            if (reduced >= 3329)
+                mont = reduced - 3329;
+            else
+                mont = reduced[11:0];
         end
     endfunction
 
@@ -70,8 +64,10 @@ module test_intt;
         reg [12:0] s;
         begin
             s = a + b;
-            if (s >= Q) addmod = s - Q;
-            else        addmod = s[11:0];
+            if (s >= Q)
+                addmod = s - Q;
+            else
+                addmod = s[11:0];
         end
     endfunction
 
@@ -79,19 +75,23 @@ module test_intt;
         input [11:0] a;
         input [11:0] b;
         begin
-            if (a >= b) submod = a - b;
-            else        submod = a + Q - b;
+            if (a >= b)
+                submod = a - b;
+            else
+                submod = a + Q - b;
         end
     endfunction
 
     initial begin
-        clk   = 0;
+        clk = 0;
         reset = 1;
         start = 0;
-        load  = 0;
-        load_addr_a = 0; load_addr_b = 0;
-        load_data_a = 0; load_data_b = 0;
-        read_addr   = 0;
+        load = 0;
+        load_addr_a = 0;
+        load_addr_b = 0;
+        load_data_a = 0;
+        load_data_b = 0;
+        read_addr = 0;
         errors = 0;
         checks = 0;
 
@@ -100,14 +100,14 @@ module test_intt;
         for (k = 0; k < 256; k = k + 1)
             init_vec[k] = (k * 7 + 13) % 3329;
 
-        // Forward NTT -> ntt_vec (same schedule as the hardware NTT)
         for (k = 0; k < 256; k = k + 1)
             ntt_vec[k] = init_vec[k];
 
         twi = 1;
         for (st = 0; st < 7; st = st + 1) begin
-            d   = 128 >> st;
+            d = 128 >> st;
             gps = 1 << st;
+
             for (g = 0; g < gps; g = g + 1) begin
                 for (jj = 0; jj < d; jj = jj + 1) begin
                     ai = (g << (8 - st)) + jj;
@@ -122,13 +122,12 @@ module test_intt;
             end
         end
 
-        // Golden INTT on a copy of ntt_vec
         for (k = 0; k < 256; k = k + 1)
             gmem[k] = ntt_vec[k];
 
         twi = 127;
         for (st = 0; st < 7; st = st + 1) begin
-            d   = 2 << st;
+            d = 2 << st;
             gps = 1 << (6 - st);
             for (g = 0; g < gps; g = g + 1) begin
                 for (jj = 0; jj < d; jj = jj + 1) begin
@@ -143,6 +142,7 @@ module test_intt;
                 twi = twi - 1;
             end
         end
+
         for (k = 0; k < 256; k = k + 1)
             gmem[k] = mont(gmem[k] * F);
 
@@ -183,7 +183,7 @@ module test_intt;
             read_addr = k;
             @(posedge clk);
             #1;
-            got       = read_data;
+            got = read_data;
             hw_out[k] = got;
             checks = checks + 1;
             if (got !== gmem[k]) begin
@@ -207,11 +207,11 @@ module test_intt;
 
         $display("--------------------------------");
         $display("Checked %0d coefficients, %0d mismatches", checks, errors);
-        if (errors == 0) $display("TEST PASSED");
-        else             $display("TEST FAILED");
+        if (errors == 0)
+            $display("TEST PASSED");
+        else
+            $display("TEST FAILED");
         $display("--------------------------------");
-
         $finish;
     end
-
 endmodule

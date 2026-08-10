@@ -1,47 +1,75 @@
 `timescale 1ns/1ps
 
-// Full CCA roundtrip for ML-KEM-512/768/1024 vs mlkem_ref.py expected SS
 module test_kem;
-
     reg clk, reset, start;
     reg [1:0] mode;
     reg [255:0] d_seed, z_seed, m_msg;
-    integer level_sel; // 512, 768, or 1024
+    reg [255:0] got_be;
+
+    integer level_sel;
+    integer t, errors, checks;
 
     wire [255:0] ss512, ss768, ss1024;
     wire done512, done768, done1024;
     wire ok512, ok768, ok1024;
     wire [15:0] st512, st768, st1024;
 
-    integer t, errors, checks;
-    reg [255:0] got_be;
+    localparam [255:0] EXP_SS_512 = 256'h6164b413348f21a5d49b561f18add239a373388ffd8ccd4650b3a11fafbfe553;
+    localparam [255:0] EXP_SS_768 = 256'h490a3f33ab31400f33db15480b3aef60f46d7f205ad4ef74c473deaf0c12443c;
+    localparam [255:0] EXP_SS_1024 = 256'hf18d073ab55f138070a775fbae4f699f7390398e8124be83f15d79321df26c7f;
 
-    // Fixed coins matching testbench/verify_kem.py / mlkem_ref.py (SS big-endian):
-    // d=bytes(range(32)), z=bytes(255-i), m=bytes((i*3)&0xFF)
-    localparam [255:0] EXP_SS_512 =
-        256'h6164b413348f21a5d49b561f18add239a373388ffd8ccd4650b3a11fafbfe553;
-    localparam [255:0] EXP_SS_768 =
-        256'h490a3f33ab31400f33db15480b3aef60f46d7f205ad4ef74c473deaf0c12443c;
-    localparam [255:0] EXP_SS_1024 =
-        256'hf18d073ab55f138070a775fbae4f699f7390398e8124be83f15d79321df26c7f;
+    kem #(.LEVEL(512)) dut512(
+        .clk(clk),
+        .reset(reset),
+        .start(start && (level_sel == 512)),
+        .mode(mode),
+        .d_seed(d_seed),
+        .z_seed(z_seed),
+        .m_msg(m_msg),
+        .din(8'd0),
+        .din_valid(1'b0),
+        .din_last(1'b0),
+        .din_sel(2'd0),
+        .ss_out(ss512),
+        .done(done512),
+        .decaps_ok(ok512),
+        .status(st512)
+    );
 
-    kem #(.LEVEL(512)) dut512 (
-        .clk(clk), .reset(reset), .start(start && (level_sel == 512)), .mode(mode),
-        .d_seed(d_seed), .z_seed(z_seed), .m_msg(m_msg),
-        .din(8'd0), .din_valid(1'b0), .din_last(1'b0), .din_sel(2'd0),
-        .ss_out(ss512), .done(done512), .decaps_ok(ok512), .status(st512)
+    kem #(.LEVEL(768)) dut768(
+        .clk(clk),
+        .reset(reset),
+        .start(start && (level_sel == 768)),
+        .mode(mode),
+        .d_seed(d_seed),
+        .z_seed(z_seed),
+        .m_msg(m_msg),
+        .din(8'd0),
+        .din_valid(1'b0),
+        .din_last(1'b0),
+        .din_sel(2'd0),
+        .ss_out(ss768),
+        .done(done768),
+        .decaps_ok(ok768),
+        .status(st768)
     );
-    kem #(.LEVEL(768)) dut768 (
-        .clk(clk), .reset(reset), .start(start && (level_sel == 768)), .mode(mode),
-        .d_seed(d_seed), .z_seed(z_seed), .m_msg(m_msg),
-        .din(8'd0), .din_valid(1'b0), .din_last(1'b0), .din_sel(2'd0),
-        .ss_out(ss768), .done(done768), .decaps_ok(ok768), .status(st768)
-    );
-    kem #(.LEVEL(1024)) dut1024 (
-        .clk(clk), .reset(reset), .start(start && (level_sel == 1024)), .mode(mode),
-        .d_seed(d_seed), .z_seed(z_seed), .m_msg(m_msg),
-        .din(8'd0), .din_valid(1'b0), .din_last(1'b0), .din_sel(2'd0),
-        .ss_out(ss1024), .done(done1024), .decaps_ok(ok1024), .status(st1024)
+
+    kem #(.LEVEL(1024)) dut1024(
+        .clk(clk),
+        .reset(reset),
+        .start(start && (level_sel == 1024)),
+        .mode(mode),
+        .d_seed(d_seed),
+        .z_seed(z_seed),
+        .m_msg(m_msg),
+        .din(8'd0),
+        .din_valid(1'b0),
+        .din_last(1'b0),
+        .din_sel(2'd0),
+        .ss_out(ss1024),
+        .done(done1024),
+        .decaps_ok(ok1024),
+        .status(st1024)
     );
 
     always #5 clk = ~clk;
@@ -82,9 +110,7 @@ module test_kem;
             else if (lvl == 768) wait (done768);
             else wait (done1024);
             #1;
-            $display("    [HW-TIME] Mode=%0d Level=%0d took %0d ns (status=%h)",
-                md, lvl, $time - t_start,
-                (lvl == 512) ? st512 : (lvl == 768) ? st768 : st1024);
+            $display("    [HW-TIME] Mode=%0d Level=%0d took %0d ns (status=%h)", md, lvl, $time - t_start, (lvl == 512) ? st512 : (lvl == 768) ? st768 : st1024);
         end
     endtask
 
