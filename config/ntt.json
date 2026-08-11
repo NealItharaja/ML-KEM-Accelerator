@@ -1,0 +1,28 @@
+{
+    "DESIGN_NAME": "ntt256",
+
+    "VERILOG_FILES": [
+        "dir::./src/ntt/ntt.v",
+        "dir::./src/ntt/butterfly.v",
+        "dir::./src/arithmetic/mod_add.v",
+        "dir::./src/arithmetic/mod_sub.v",
+        "dir::./src/arithmetic/mod_mult.v",
+        "dir::./src/arithmetic/montgomery.v",
+        "dir::./src/memory/coeff_ram.v",
+        "dir::./src/memory/twiddle_rom.v",
+        "dir::./src/memory/address_gen.v"
+    ],
+
+    "FP_SIZING": "absolute",
+
+    "CLOCK_PORT": "clk",
+
+    "CLOCK_PERIOD": 30,
+
+    "DIE_AREA": [
+        0,
+        0,
+        900,
+        900
+    ]
+}
