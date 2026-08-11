@@ -1,4 +1,4 @@
-// Fully working ML-KEM CCA; LEVELS = 512 | 768 | 1024
+// Fully working ML-KEM CCA; LEVEL = 512 | 768 | 1024
 module kem #(
     parameter LEVEL = 512
 )(
@@ -12,7 +12,7 @@ module kem #(
     input [7:0] din,
     input din_valid,
     input din_last,
-    input [1:0]  din_sel,
+    input [1:0] din_sel,
     output reg [255:0] ss_out,
     output reg done,
     output reg decaps_ok,
@@ -28,7 +28,6 @@ module kem #(
     localparam integer SK_LEN = SK_PKE + PK_LEN + 64;
     localparam integer CT_LEN = 32 * DU * K + 32 * DV;
     localparam integer U_BYTES = 32 * DU;
-
     localparam [11:0] q = 12'd3329;
     localparam [3:0] S0 = 4'd0;
     localparam [3:0] E0 = 4'd4;
@@ -77,9 +76,19 @@ module kem #(
     reg [15:0] hpos;
     reg [11:0] tmpv;
     reg ct_ok;
+    reg [11:0] p_rd_addr;
+    reg [10:0] pk_rd_addr;
+    reg [11:0] sk_rd_addr;
+    reg [10:0] ct_rd_addr;
+    reg [10:0] ct2_rd_addr;
 
     integer ii;
 
+    wire [11:0] p_rd_data = P[p_rd_addr];
+    wire [7:0] pk_rd_data = pk_mem[pk_rd_addr];
+    wire [7:0] sk_rd_data = sk_mem[sk_rd_addr];
+    wire [7:0] ct_rd_data = ct_mem[ct_rd_addr];
+    wire [7:0] ct2_rd_data = ct2_mem[ct2_rd_addr];
     wire ops_busy, ops_done;
     wire [12:0] ops_addr;
     wire [11:0] ops_wdata;
@@ -98,6 +107,68 @@ module kem #(
     wire [3:0] xc4;
     wire [4:0] xc5;
     wire xc1;
+
+    always @(*) begin
+        p_rd_addr = 12'd0;
+        if (phase == 8'd5  && sub == 8'd2)
+            p_rd_addr = (T0 + pi) * 256 + idx[7:0];
+        else if (phase == 8'd6  && sub == 8'd2)
+            p_rd_addr = (S0 + pi) * 256 + idx[7:0];
+        else if (phase == 8'd45 && sub == 8'd7)
+            p_rd_addr = SV * 256 + idx[7:0];
+        else if (phase == 8'd46 && sub == 8'd1)
+            p_rd_addr = (E0 + pi) * 256 + idx[7:0];
+        else if (phase == 8'd46 && sub == 8'd4)
+            p_rd_addr = SV * 256 + idx[7:0];
+        else if (phase == 8'd84 && sub == 8'd6)
+            p_rd_addr = SW * 256 + idx[7:0];
+    end
+
+    always @(*) begin
+        pk_rd_addr = 11'd0;
+        if (phase == 8'd6  && sub == 8'd4)
+            pk_rd_addr = idx[10:0];
+        else if (phase == 8'd6  && sub == 8'd5)
+            pk_rd_addr = hpos[10:0];
+        else if (phase == 8'd40 && sub == 8'd0)
+            pk_rd_addr = hpos[10:0];
+        else if (phase == 8'd40 && sub == 8'd8)
+            pk_rd_addr = K * 384 + idx[7:0];
+        else if (phase == 8'd41 && sub == 8'd1)
+            pk_rd_addr = bidx[10:0];
+    end
+
+    always @(*) begin
+        sk_rd_addr = 12'd0;
+        if (phase == 8'd80 && sub == 8'd2)
+            sk_rd_addr = SK_PKE + PK_LEN + idx[11:0];
+        else if (phase == 8'd80 && sub == 8'd3)
+            sk_rd_addr = SK_PKE + PK_LEN + 32 + idx[11:0];
+        else if (phase == 8'd80 && sub == 8'd4)
+            sk_rd_addr = SK_PKE + (K * 384) + idx[11:0];
+        else if (phase == 8'd80 && sub == 8'd1)
+            sk_rd_addr = SK_PKE + idx[11:0];
+        else if (phase == 8'd81 && sub == 8'd1)
+            sk_rd_addr = bidx[11:0];
+    end
+
+    always @(*) begin
+        ct_rd_addr = 11'd0;
+        if (phase == 8'd82 && sub == 8'd1)
+            ct_rd_addr = bidx[10:0];
+        else if (phase == 8'd83 && sub == 8'd0)
+            ct_rd_addr = bidx[10:0];
+        else if (phase == 8'd90 && sub == 8'd0)
+            ct_rd_addr = idx[10:0];
+        else if (phase == 8'd90 && sub == 8'd1)
+            ct_rd_addr = hpos[10:0] - 11'd32;
+    end
+
+    always @(*) begin
+        ct2_rd_addr = 11'd0;
+        if (phase == 8'd90 && sub == 8'd0)
+            ct2_rd_addr = idx[10:0];
+    end
 
     kem_ops u_ops(
         .clk(clk),
@@ -372,7 +443,7 @@ module kem #(
             end
 
             // ===================== KEYGEN =====================
-            // G(d||k) -> rho, sigma (33 bytes: d_seed[0..31] + K[7:0])
+            // G(d||k) -> rho, sigma (33 bytes)
             8'd1: begin
                 if (sub == 8'd0) begin
                     if (grdy) begin
@@ -400,22 +471,25 @@ module kem #(
                 else if (sub == 8'd3) begin
                     if (gdv_o) begin
                         hout[hpos] <= gdout;
-                        if (hpos == 16'd63)
+                        if (hpos == 16'd63) begin
+                            idx <= 16'd0;
                             sub <= 8'd4;
-                        else begin
+                        end else begin
                             hpos <= hpos + 16'd1;
                             sub <= 8'd2;
                         end
                     end
                 end
-                else begin
-                    for (ii = 0; ii < 32; ii = ii + 1) begin
-                        rho[8*ii +: 8]   <= hout[ii];
-                        sigma[8*ii +: 8] <= hout[32 + ii];
+                else if (sub == 8'd4) begin
+                    rho[8*idx[4:0] +: 8] <= hout[idx[5:0]];
+                    sigma[8*idx[4:0] +: 8] <= hout[32 + idx[5:0]];
+                    if (idx == 16'd31) begin
+                        pi <= 4'd0;
+                        sub <= 8'd0;
+                        phase <= 8'd2;
+                    end else begin
+                        idx <= idx + 16'd1;
                     end
-                    pi <= 4'd0;
-                    sub <= 8'd0;
-                    phase <= 8'd2;
                 end
             end
 
@@ -438,8 +512,7 @@ module kem #(
                             cpu_wdata <= c3c;
                             idx <= idx + 16'd1;
                         end
-                        if (c3d)
-                            sub <= 8'd2;
+                        if (c3d) sub <= 8'd2;
                     end
                     else begin
                         if (c2v) begin
@@ -448,8 +521,7 @@ module kem #(
                             cpu_wdata <= c2c;
                             idx <= idx + 16'd1;
                         end
-                        if (c2d)
-                            sub <= 8'd2;
+                        if (c2d) sub <= 8'd2;
                     end
                 end
                 else if (sub == 8'd2) begin
@@ -500,8 +572,7 @@ module kem #(
                             cpu_wdata <= c3c;
                             idx <= idx + 16'd1;
                         end
-                        if (c3d)
-                            sub <= 8'd2;
+                        if (c3d) sub <= 8'd2;
                     end
                     else begin
                         if (c2v) begin
@@ -510,8 +581,7 @@ module kem #(
                             cpu_wdata <= c2c;
                             idx <= idx + 16'd1;
                         end
-                        if (c2d)
-                            sub <= 8'd2;
+                        if (c2d) sub <= 8'd2;
                     end
                 end
                 else if (sub == 8'd2) begin
@@ -544,7 +614,7 @@ module kem #(
                 end
             end
 
-            // t = A*s + e   (A[i][j] = SampleNTT(rho||j||i) -> sn_i=j, sn_j=i)
+            // t = A*s + e
             8'd4: begin
                 if (sub == 8'd0) begin
                     ops_cmd <= OP_CLR;
@@ -568,8 +638,7 @@ module kem #(
                         cpu_wdata <= sn_c;
                         idx <= idx + 16'd1;
                     end
-                    if (sn_done)
-                        sub <= 8'd3;
+                    if (sn_done) sub <= 8'd3;
                 end
                 else if (sub == 8'd3) begin
                     ops_cmd <= OP_TOM;
@@ -641,7 +710,7 @@ module kem #(
                     end
                 end
                 else if (sub == 8'd2) begin
-                    bit_buf <= bit_buf | ({20'd0, P[(T0 + pi) * 256 + idx[7:0]]} << nbits);
+                    bit_buf <= bit_buf | ({20'd0, p_rd_data} << nbits);
                     nbits <= nbits + 6'd12;
                     sub <= 8'd3;
                 end
@@ -658,16 +727,23 @@ module kem #(
                             sub <= 8'd0;
                         end
                         else begin
-                            for (ii = 0; ii < 32; ii = ii + 1)
-                                pk_mem[K * 384 + ii] <= rho[8*ii +: 8];
-                            pi <= 4'd0;
-                            sub <= 8'd0;
-                            phase <= 8'd6;
+                            idx <= 16'd0;
+                            sub <= 8'd4;
                         end
                     end
                     else begin
                         idx <= idx + 16'd1;
                         sub <= 8'd2;
+                    end
+                end
+                else if (sub == 8'd4) begin
+                    pk_mem[K * 384 + idx] <= rho[8*idx[4:0] +: 8];
+                    if (idx == 16'd31) begin
+                        pi <= 4'd0;
+                        sub <= 8'd0;
+                        phase <= 8'd6;
+                    end else begin
+                        idx <= idx + 16'd1;
                     end
                 end
             end
@@ -690,7 +766,7 @@ module kem #(
                     end
                 end
                 else if (sub == 8'd2) begin
-                    bit_buf <= bit_buf | ({20'd0, P[(S0 + pi) * 256 + idx[7:0]]} << nbits);
+                    bit_buf <= bit_buf | ({20'd0, p_rd_data} << nbits);
                     nbits <= nbits + 6'd12;
                     sub <= 8'd3;
                 end
@@ -717,7 +793,7 @@ module kem #(
                     end
                 end
                 else if (sub == 8'd4) begin
-                    sk_mem[SK_PKE + idx] <= pk_mem[idx];
+                    sk_mem[SK_PKE + idx] <= pk_rd_data;
                     if (idx + 1 == PK_LEN[15:0]) begin
                         hs <= 1'b1;
                         hpos <= 16'd0;
@@ -728,7 +804,7 @@ module kem #(
                 end
                 else if (sub == 8'd5) begin
                     if (hrdy) begin
-                        hdin <= pk_mem[hpos];
+                        hdin <= pk_rd_data;
                         hdv <= 1'b1;
                         hdl <= (hpos + 1 == PK_LEN[15:0]);
                         sub <= 8'd15;
@@ -756,8 +832,10 @@ module kem #(
                     if (hdv_o) begin
                         sk_mem[SK_PKE + PK_LEN + hpos] <= hdout;
                         h_pk[8*hpos +: 8] <= hdout;
-                        if (hpos == 16'd31)
+                        if (hpos == 16'd31) begin
+                            idx <= 16'd0;
                             sub <= 8'd9;
+                        end
                         else begin
                             hpos <= hpos + 16'd1;
                             sub <= 8'd7;
@@ -765,11 +843,14 @@ module kem #(
                     end
                 end
                 else if (sub == 8'd9) begin
-                    for (ii = 0; ii < 32; ii = ii + 1)
-                        sk_mem[SK_PKE + PK_LEN + 32 + ii] <= z_r[8*ii +: 8];
-                    done <= 1'b1;
-                    status <= 16'h0A01;
-                    phase <= 8'd0;
+                    sk_mem[SK_PKE + PK_LEN + 32 + idx] <= z_r[8*idx[4:0] +: 8];
+                    if (idx == 16'd31) begin
+                        done <= 1'b1;
+                        status <= 16'h0A01;
+                        phase <= 8'd0;
+                    end else begin
+                        idx <= idx + 16'd1;
+                    end
                 end
             end
 
@@ -778,7 +859,7 @@ module kem #(
             8'd40: begin
                 if (sub == 8'd0) begin
                     if (hrdy) begin
-                        hdin <= pk_mem[hpos];
+                        hdin <= pk_rd_data; // CENTRALIZED PK
                         hdv <= 1'b1;
                         hdl <= (hpos + 1 == PK_LEN[15:0]);
                         sub <= 8'd10;
@@ -842,23 +923,27 @@ module kem #(
                 else if (sub == 8'd7) begin
                     if (gdv_o) begin
                         hout[hpos] <= gdout;
-                        if (hpos == 16'd63)
+                        if (hpos == 16'd63) begin
+                            idx <= 16'd0;
                             sub <= 8'd8;
-                        else begin
+                        end else begin
                             hpos <= hpos + 16'd1;
                             sub <= 8'd6;
                         end
                     end
                 end
-                else begin
-                    for (ii = 0; ii < 32; ii = ii + 1) begin
-                        K_bar[8*ii +: 8] <= hout[ii];
-                        sigma[8*ii +: 8] <= hout[32 + ii];
-                        rho[8*ii +: 8]   <= pk_mem[K * 384 + ii];
+                else if (sub == 8'd8) begin
+                    K_bar[8*idx[4:0] +: 8] <= hout[idx[5:0]];
+                    sigma[8*idx[4:0] +: 8] <= hout[32 + idx[5:0]];
+                    rho[8*idx[4:0] +: 8]   <= pk_rd_data;
+
+                    if (idx == 16'd31) begin
+                        pi <= 4'd0;
+                        sub <= 8'd0;
+                        phase <= 8'd41;
+                    end else begin
+                        idx <= idx + 16'd1;
                     end
-                    pi <= 4'd0;
-                    sub <= 8'd0;
-                    phase <= 8'd41;
                 end
             end
 
@@ -873,7 +958,7 @@ module kem #(
                 end
                 else if (sub == 8'd1) begin
                     if (nbits < 6'd12) begin
-                        bit_buf <= bit_buf | ({24'd0, pk_mem[bidx]} << nbits);
+                        bit_buf <= bit_buf | ({24'd0, pk_rd_data} << nbits);
                         nbits <= nbits + 6'd8;
                         bidx <= bidx + 16'd1;
                     end
@@ -914,10 +999,8 @@ module kem #(
             8'd42: begin
                 if (sub == 8'd0) begin
                     cnonce <= {4'd0, pi};
-                    if (ETA1 == 3)
-                        c3s <= 1'b1;
-                    else
-                        c2s <= 1'b1;
+                    if (ETA1 == 3) c3s <= 1'b1;
+                    else c2s <= 1'b1;
                     idx <= 16'd0;
                     sub <= 8'd1;
                 end
@@ -929,8 +1012,7 @@ module kem #(
                             cpu_wdata <= c3c;
                             idx <= idx + 16'd1;
                         end
-                        if (c3d)
-                            sub <= 8'd2;
+                        if (c3d) sub <= 8'd2;
                     end
                     else begin
                         if (c2v) begin
@@ -939,8 +1021,7 @@ module kem #(
                             cpu_wdata <= c2c;
                             idx <= idx + 16'd1;
                         end
-                        if (c2d)
-                            sub <= 8'd2;
+                        if (c2d) sub <= 8'd2;
                     end
                 end
                 else if (sub == 8'd2) begin
@@ -1017,7 +1098,6 @@ module kem #(
             end
 
             // u = INTT(A^T * r) + e1
-            // At[i][j]=A[j][i] => SampleNTT(rho||i||j) => sn_i=i, sn_j=j
             8'd44: begin
                 if (sub == 8'd0) begin
                     ops_cmd <= OP_CLR;
@@ -1041,8 +1121,7 @@ module kem #(
                         cpu_wdata <= sn_c;
                         idx <= idx + 16'd1;
                     end
-                    if (sn_done)
-                        sub <= 8'd3;
+                    if (sn_done) sub <= 8'd3;
                 end
                 else if (sub == 8'd3) begin
                     ops_cmd <= OP_TOM;
@@ -1178,7 +1257,7 @@ module kem #(
                     sub <= 8'd7;
                 end
                 else if (sub == 8'd7) begin
-                    add_a <= P[SV * 256 + idx[7:0]];
+                    add_a <= p_rd_data;
                     add_b <= xd1;
                     sub <= 8'd8;
                 end
@@ -1212,7 +1291,7 @@ module kem #(
                     sub <= 8'd1;
                 end
                 else if (sub == 8'd1) begin
-                    xd <= P[(E0 + pi) * 256 + idx[7:0]];
+                    xd <= p_rd_data;
                     sub <= 8'd2;
                 end
                 else if (sub == 8'd2) begin
@@ -1225,10 +1304,8 @@ module kem #(
                 end
                 else if (sub == 8'd3) begin
                     if (nbits >= 6'd8) begin
-                        if (reenc)
-                            ct2_mem[widx] <= bit_buf[7:0];
-                        else
-                            ct_mem[widx] <= bit_buf[7:0];
+                        if (reenc) ct2_mem[widx] <= bit_buf[7:0];
+                        else ct_mem[widx] <= bit_buf[7:0];
                         bit_buf <= bit_buf >> 8;
                         nbits <= nbits - 6'd8;
                         widx <= widx + 16'd1;
@@ -1252,7 +1329,7 @@ module kem #(
                     end
                 end
                 else if (sub == 8'd4) begin
-                    xd <= P[SV * 256 + idx[7:0]];
+                    xd <= p_rd_data;
                     sub <= 8'd5;
                 end
                 else if (sub == 8'd5) begin
@@ -1265,10 +1342,8 @@ module kem #(
                 end
                 else if (sub == 8'd6) begin
                     if (nbits >= 6'd8) begin
-                        if (reenc)
-                            ct2_mem[widx] <= bit_buf[7:0];
-                        else
-                            ct_mem[widx] <= bit_buf[7:0];
+                        if (reenc) ct2_mem[widx] <= bit_buf[7:0];
+                        else ct_mem[widx] <= bit_buf[7:0];
                         bit_buf <= bit_buf >> 8;
                         nbits <= nbits - 6'd8;
                         widx <= widx + 16'd1;
@@ -1281,8 +1356,7 @@ module kem #(
                             phase <= 8'd90;
                         end
                         else begin
-                            for (ii = 0; ii < 32; ii = ii + 1)
-                                ss_out[8*ii +: 8] <= K_bar[8*ii +: 8];
+                            ss_out <= K_bar;
                             done <= 1'b1;
                             status <= 16'h0A02;
                             phase <= 8'd0;
@@ -1296,19 +1370,35 @@ module kem #(
             end
 
             // ===================== DECAPS =====================
-            // copy pk from sk; load h,z,rho
+            // copy pk from sk; load h,z,rho sequentially
             8'd80: begin
                 if (sub == 8'd0) begin
-                    for (ii = 0; ii < 32; ii = ii + 1) begin
-                        h_pk[8*ii +: 8] <= sk_mem[SK_PKE + PK_LEN + ii];
-                        z_r[8*ii +: 8]  <= sk_mem[SK_PKE + PK_LEN + 32 + ii];
-                        rho[8*ii +: 8]  <= sk_mem[SK_PKE + K * 384 + ii];
-                    end
                     idx <= 16'd0;
-                    sub <= 8'd1;
+                    sub <= 8'd2;
+                end
+                else if (sub == 8'd2) begin
+                    h_pk[8*idx[4:0] +: 8] <= sk_rd_data;
+                    if (idx == 16'd31) begin
+                        idx <= 16'd0;
+                        sub <= 8'd3;
+                    end else idx <= idx + 16'd1;
+                end
+                else if (sub == 8'd3) begin
+                    z_r[8*idx[4:0] +: 8] <= sk_rd_data;
+                    if (idx == 16'd31) begin
+                        idx <= 16'd0;
+                        sub <= 8'd4;
+                    end else idx <= idx + 16'd1;
+                end
+                else if (sub == 8'd4) begin
+                    rho[8*idx[4:0] +: 8] <= sk_rd_data;
+                    if (idx == 16'd31) begin
+                        idx <= 16'd0;
+                        sub <= 8'd1;
+                    end else idx <= idx + 16'd1;
                 end
                 else if (sub == 8'd1) begin
-                    pk_mem[idx] <= sk_mem[SK_PKE + idx];
+                    pk_mem[idx] <= sk_rd_data;
                     if (idx + 1 == PK_LEN[15:0]) begin
                         pi <= 4'd0;
                         sub <= 8'd0;
@@ -1330,7 +1420,7 @@ module kem #(
                 end
                 else if (sub == 8'd1) begin
                     if (nbits < 6'd12) begin
-                        bit_buf <= bit_buf | ({24'd0, sk_mem[bidx]} << nbits);
+                        bit_buf <= bit_buf | ({24'd0, sk_rd_data} << nbits);
                         nbits <= nbits + 6'd8;
                         bidx <= bidx + 16'd1;
                     end
@@ -1378,7 +1468,7 @@ module kem #(
                 end
                 else if (sub == 8'd1) begin
                     if (nbits < DU[5:0]) begin
-                        bit_buf <= bit_buf | ({24'd0, ct_mem[bidx]} << nbits);
+                        bit_buf <= bit_buf | ({24'd0, ct_rd_data} << nbits);
                         nbits <= nbits + 6'd8;
                         bidx <= bidx + 16'd1;
                     end
@@ -1392,12 +1482,10 @@ module kem #(
                 else if (sub == 8'd2) begin
                     cpu_we <= 1'b1;
                     cpu_addr <= (E0 + pi) * 256 + idx[7:0];
-                    if (DU == 11)
-                        cpu_wdata <= xd11;
-                    else
-                        cpu_wdata <= xd10;
-                    if (idx == 16'd255)
-                        sub <= 8'd3;
+                    if (DU == 11) cpu_wdata <= xd11;
+                    else cpu_wdata <= xd10;
+
+                    if (idx == 16'd255) sub <= 8'd3;
                     else begin
                         idx <= idx + 16'd1;
                         sub <= 8'd1;
@@ -1439,7 +1527,7 @@ module kem #(
             8'd83: begin
                 if (sub == 8'd0) begin
                     if (nbits < DV[5:0]) begin
-                        bit_buf <= bit_buf | ({24'd0, ct_mem[bidx]} << nbits);
+                        bit_buf <= bit_buf | ({24'd0, ct_rd_data} << nbits);
                         nbits <= nbits + 6'd8;
                         bidx <= bidx + 16'd1;
                     end
@@ -1453,10 +1541,9 @@ module kem #(
                 else if (sub == 8'd1) begin
                     cpu_we <= 1'b1;
                     cpu_addr <= SV * 256 + idx[7:0];
-                    if (DV == 5)
-                        cpu_wdata <= xd5;
-                    else
-                        cpu_wdata <= xd4;
+                    if (DV == 5) cpu_wdata <= xd5;
+                    else cpu_wdata <= xd4;
+
                     if (idx == 16'd255) begin
                         pi <= 4'd0;
                         sub <= 8'd0;
@@ -1532,7 +1619,7 @@ module kem #(
                     end
                 end
                 else if (sub == 8'd6) begin
-                    xd <= P[SW * 256 + idx[7:0]];
+                    xd <= p_rd_data;
                     sub <= 8'd7;
                 end
                 else if (sub == 8'd7) begin
@@ -1578,35 +1665,39 @@ module kem #(
                 else if (sub == 8'd3) begin
                     if (gdv_o) begin
                         hout[hpos] <= gdout;
-                        if (hpos == 16'd63)
+                        if (hpos == 16'd63) begin
+                            idx <= 16'd0;
                             sub <= 8'd4;
-                        else begin
+                        end else begin
                             hpos <= hpos + 16'd1;
                             sub <= 8'd2;
                         end
                     end
                 end
-                else begin
-                    for (ii = 0; ii < 32; ii = ii + 1) begin
-                        K_bar[8*ii +: 8] <= hout[ii];
-                        sigma[8*ii +: 8] <= hout[32 + ii];
+                else if (sub == 8'd4) begin
+                    K_bar[8*idx[4:0] +: 8] <= hout[idx[5:0]];
+                    sigma[8*idx[4:0] +: 8] <= hout[32 + idx[5:0]];
+
+                    if (idx == 16'd31) begin
+                        reenc <= 1'b1;
+                        pi <= 4'd0;
+                        sub <= 8'd0;
+                        phase <= 8'd41;
+                    end else begin
+                        idx <= idx + 16'd1;
                     end
-                    reenc <= 1'b1;
-                    pi <= 4'd0;
-                    sub <= 8'd0;
-                    phase <= 8'd41;
                 end
             end
 
             // compare ct2 vs ct; accept K_bar or J(z||ct)
             8'd90: begin
                 if (sub == 8'd0) begin
-                    if (ct2_mem[idx] != ct_mem[idx])
+                    if (ct2_rd_data != ct_rd_data)
                         ct_ok <= 1'b0;
+
                     if (idx + 1 == CT_LEN[15:0]) begin
-                        if (ct_ok && (ct2_mem[idx] == ct_mem[idx])) begin
-                            for (ii = 0; ii < 32; ii = ii + 1)
-                                ss_out[8*ii +: 8] <= K_bar[8*ii +: 8];
+                        if (ct_ok && (ct2_rd_data == ct_rd_data)) begin
+                            ss_out <= K_bar;
                             decaps_ok <= 1'b1;
                             done <= 1'b1;
                             status <= 16'h0A03;
@@ -1624,18 +1715,16 @@ module kem #(
                 end
                 else if (sub == 8'd1) begin
                     if (jrdy) begin
-                        if (hpos < 16'd32)
-                            jdin <= z_r[8*hpos +: 8];
-                        else
-                            jdin <= ct_mem[hpos - 16'd32];
+                        if (hpos < 16'd32) jdin <= z_r[8*hpos +: 8];
+                        else jdin <= ct_rd_data;
+
                         jdv <= 1'b1;
                         jdl <= (hpos + 1 == (32 + CT_LEN));
                         sub <= 8'd5;
                     end
                 end
                 else if (sub == 8'd5) begin
-                    if (hpos + 1 == (32 + CT_LEN))
-                        sub <= 8'd2;
+                    if (hpos + 1 == (32 + CT_LEN)) sub <= 8'd2;
                     else begin
                         hpos <= hpos + 16'd1;
                         sub <= 8'd1;
