@@ -67,7 +67,7 @@ module to_mont_tb;
         check_result();
 
         A=1000;   
-        heck_result();
+        check_result();
 
         A=2048;   
         check_result();
