@@ -80,8 +80,6 @@ module kem #(
     reg [7:0] hout [0:63];
     reg [15:0] hpos;
     reg ct_ok;
-    reg [12:0] bmem_ra;
-    reg [3:0]  p_rs;
 
     integer ii;
 
@@ -131,42 +129,6 @@ module kem #(
         if (bmem_we)
             bmem[bmem_waddr] <= bmem_wdata;
     end
-
-    // Every variable-address read of bmem/P funnels through one shared port so
-    // synthesis infers a single address-decode tree per array instead of one
-    // per read site. The address is selected from the current phase/sub, so the
-    // data is still valid in the same cycle the FSM branch uses it.
-    always @(*) begin
-        case (phase)
-        8'd6:  bmem_ra = (sub == 8'd5) ? (PK_BASE + hpos) : (PK_BASE + idx);
-        8'd40: bmem_ra = PK_BASE + hpos;
-        8'd41: bmem_ra = PK_BASE + bidx;
-        8'd80: bmem_ra = SK_BASE + SK_PKE + idx;
-        8'd81: bmem_ra = SK_BASE + bidx;
-        8'd82: bmem_ra = CT_BASE + bidx;
-        8'd83: bmem_ra = CT_BASE + bidx;
-        8'd90: bmem_ra = (sub == 8'd0) ? (CT_BASE + idx)
-                       : (hpos >= 16'd32) ? (CT_BASE + hpos - 16'd32)
-                       : CT_BASE[12:0];
-        default: bmem_ra = 13'd0;
-        endcase
-    end
-
-    always @(*) begin
-        case (phase)
-        8'd5:  p_rs = T0[3:0] + pi;
-        8'd6:  p_rs = S0[3:0] + pi;
-        8'd45: p_rs = SV[3:0];
-        8'd46: p_rs = (sub == 8'd4) ? SV[3:0] : (E0[3:0] + pi);
-        8'd84: p_rs = SW[3:0];
-        default: p_rs = 4'd0;
-        endcase
-    end
-
-    wire [7:0]  bmem_qa = bmem[bmem_ra];
-    // Second port: decaps compares ct and ct2 in the same cycle.
-    wire [7:0]  bmem_qb = bmem[CT2_BASE + idx];
-    wire [11:0] p_q = P[{p_rs, idx[7:0]}];
 
     sample_ntt u_sn(
         .clk(clk),
@@ -711,7 +673,7 @@ module kem #(
                     end
                 end
                 else if (sub == 8'd2) begin
-                    bit_buf <= bit_buf | ({20'd0, p_q} << nbits);
+                    bit_buf <= bit_buf | ({20'd0, P[(T0 + pi) * 256 + idx[7:0]]} << nbits);
                     nbits <= nbits + 6'd12;
                     sub <= 8'd3;
                 end
@@ -772,7 +734,7 @@ module kem #(
                     end
                 end
                 else if (sub == 8'd2) begin
-                    bit_buf <= bit_buf | ({20'd0, p_q} << nbits);
+                    bit_buf <= bit_buf | ({20'd0, P[(S0 + pi) * 256 + idx[7:0]]} << nbits);
                     nbits <= nbits + 6'd12;
                     sub <= 8'd3;
                 end
@@ -803,7 +765,7 @@ module kem #(
                 else if (sub == 8'd4) begin
                     bmem_we <= 1'b1;
                     bmem_waddr <= SK_BASE + SK_PKE + idx;
-                    bmem_wdata <= bmem_qa;
+                    bmem_wdata <= bmem[PK_BASE + idx];
                     if (idx + 1 == PK_LEN[15:0]) begin
                         hs <= 1'b1;
                         hpos <= 16'd0;
@@ -814,7 +776,7 @@ module kem #(
                 end
                 else if (sub == 8'd5) begin
                     if (hrdy) begin
-                        hdin <= bmem_qa;
+                        hdin <= bmem[PK_BASE + hpos];
                         hdv <= 1'b1;
                         hdl <= (hpos + 1 == PK_LEN[15:0]);
                         sub <= 8'd15;
@@ -873,7 +835,7 @@ module kem #(
             8'd40: begin
                 if (sub == 8'd0) begin
                     if (hrdy) begin
-                        hdin <= bmem_qa;
+                        hdin <= bmem[PK_BASE + hpos];
                         hdv <= 1'b1;
                         hdl <= (hpos + 1 == PK_LEN[15:0]);
                         sub <= 8'd10;
@@ -968,7 +930,7 @@ module kem #(
                 end
                 else if (sub == 8'd1) begin
                     if (nbits < 6'd12) begin
-                        bit_buf <= bit_buf | ({24'd0, bmem_qa} << nbits);
+                        bit_buf <= bit_buf | ({24'd0, bmem[PK_BASE + bidx]} << nbits);
                         nbits <= nbits + 6'd8;
                         bidx <= bidx + 16'd1;
                     end
@@ -1273,7 +1235,7 @@ module kem #(
                     sub <= 8'd7;
                 end
                 else if (sub == 8'd7) begin
-                    add_a <= p_q;
+                    add_a <= P[SV * 256 + idx[7:0]];
                     add_b <= xd1;
                     sub <= 8'd8;
                 end
@@ -1307,7 +1269,7 @@ module kem #(
                     sub <= 8'd1;
                 end
                 else if (sub == 8'd1) begin
-                    xd <= p_q;
+                    xd <= P[(E0 + pi) * 256 + idx[7:0]];
                     sub <= 8'd2;
                 end
                 else if (sub == 8'd2) begin
@@ -1346,7 +1308,7 @@ module kem #(
                     end
                 end
                 else if (sub == 8'd4) begin
-                    xd <= p_q;
+                    xd <= P[SV * 256 + idx[7:0]];
                     sub <= 8'd5;
                 end
                 else if (sub == 8'd5) begin
@@ -1403,7 +1365,7 @@ module kem #(
                 else if (sub == 8'd1) begin
                     bmem_we <= 1'b1;
                     bmem_waddr <= PK_BASE + idx;
-                    bmem_wdata <= bmem_qa;
+                    bmem_wdata <= bmem[SK_BASE + SK_PKE + idx];
                     if (idx + 1 == PK_LEN[15:0]) begin
                         pi <= 4'd0;
                         sub <= 8'd0;
@@ -1425,7 +1387,7 @@ module kem #(
                 end
                 else if (sub == 8'd1) begin
                     if (nbits < 6'd12) begin
-                        bit_buf <= bit_buf | ({24'd0, bmem_qa} << nbits);
+                        bit_buf <= bit_buf | ({24'd0, bmem[SK_BASE + bidx]} << nbits);
                         nbits <= nbits + 6'd8;
                         bidx <= bidx + 16'd1;
                     end
@@ -1473,7 +1435,7 @@ module kem #(
                 end
                 else if (sub == 8'd1) begin
                     if (nbits < DU[5:0]) begin
-                        bit_buf <= bit_buf | ({24'd0, bmem_qa} << nbits);
+                        bit_buf <= bit_buf | ({24'd0, bmem[CT_BASE + bidx]} << nbits);
                         nbits <= nbits + 6'd8;
                         bidx <= bidx + 16'd1;
                     end
@@ -1534,7 +1496,7 @@ module kem #(
             8'd83: begin
                 if (sub == 8'd0) begin
                     if (nbits < DV[5:0]) begin
-                        bit_buf <= bit_buf | ({24'd0, bmem_qa} << nbits);
+                        bit_buf <= bit_buf | ({24'd0, bmem[CT_BASE + bidx]} << nbits);
                         nbits <= nbits + 6'd8;
                         bidx <= bidx + 16'd1;
                     end
@@ -1627,7 +1589,7 @@ module kem #(
                     end
                 end
                 else if (sub == 8'd6) begin
-                    xd <= p_q;
+                    xd <= P[SW * 256 + idx[7:0]];
                     sub <= 8'd7;
                 end
                 else if (sub == 8'd7) begin
@@ -1696,10 +1658,10 @@ module kem #(
             // compare ct2 vs ct; accept K_bar or J(z||ct)
             8'd90: begin
                 if (sub == 8'd0) begin
-                    if (bmem_qb != bmem_qa)
+                    if (bmem[CT2_BASE + idx] != bmem[CT_BASE + idx])
                         ct_ok <= 1'b0;
                     if (idx + 1 == CT_LEN[15:0]) begin
-                        if (ct_ok && (bmem_qb == bmem_qa)) begin
+                        if (ct_ok && (bmem[CT2_BASE + idx] == bmem[CT_BASE + idx])) begin
                             for (ii = 0; ii < 32; ii = ii + 1)
                                 ss_out[8*ii +: 8] <= K_bar[8*ii +: 8];
                             decaps_ok <= 1'b1;
@@ -1722,7 +1684,7 @@ module kem #(
                         if (hpos < 16'd32)
                             jdin <= z_r[8*hpos +: 8];
                         else
-                            jdin <= bmem_qa;
+                            jdin <= bmem[CT_BASE + hpos - 16'd32];
                         jdv <= 1'b1;
                         jdl <= (hpos + 1 == (32 + CT_LEN));
                         sub <= 8'd5;
