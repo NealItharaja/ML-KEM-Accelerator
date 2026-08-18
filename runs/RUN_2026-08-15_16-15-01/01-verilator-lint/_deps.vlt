@@ -1,7 +1,0 @@
-`verilator_config
-lint_off -rule DECLFILENAME
-lint_off -rule EOFNEWLINE
-lint_off -rule UNDRIVEN -file "/mnt/c/Users/neali/librelane/ML-KEM-Accelerator/runs/RUN_2026-08-15_16-15-01/tmp/e2fa91c674c940ff9fc1cbfb9c7c8eb6.bb.v"
-lint_off -rule UNUSEDSIGNAL -file "/mnt/c/Users/neali/librelane/ML-KEM-Accelerator/runs/RUN_2026-08-15_16-15-01/tmp/e2fa91c674c940ff9fc1cbfb9c7c8eb6.bb.v"
-lint_off -rule UNDRIVEN -file "/mnt/c/Users/neali/librelane/ML-KEM-Accelerator/runs/RUN_2026-08-15_16-15-01/tmp/c53c8c65856f41629b2e50185c59910f.bb.v"
-lint_off -rule UNUSEDSIGNAL -file "/mnt/c/Users/neali/librelane/ML-KEM-Accelerator/runs/RUN_2026-08-15_16-15-01/tmp/c53c8c65856f41629b2e50185c59910f.bb.v"
