@@ -40,11 +40,13 @@
 
   "FP_SIZING": "absolute",
 
-  "DIE_AREA": [0, 0, 4500, 4500],
+  "DIE_AREA": [0, 0, 4950, 4950],
 
   "CORE_AREA": [10, 10, 4490, 4490],
 
-  "FP_PDN_MULTILAYER": true,
+  "PL_TARGET_DENSITY_PCT": 50,
+
+  "PDN_MULTILAYER": true,
 
   "MAX_TRANSITION_CONSTRAINT": 1.5,
 
@@ -52,15 +54,21 @@
 
   "SYNTH_STRATEGY": "AREA 0",
 
+  "SYNTH_NO_FLAT": true,
+
+  "RUN_HEURISTIC_DIODE_INSERTION": true,
+
+  "RUN_ANTENNA_REPAIR": true,
+
   "VERILOG_INCLUDE_DIRS": [
     "dir::./src/memory",
     "dir::./src/macros"
   ],
 
-  "VERILOG_FILES_BLACKBOX": [
+  "EXTRA_VERILOG_MODELS": [
     "dir::./src/macros/sky130_sram_1kbyte_1rw1r_32x256_8.v"
   ],
-  
+
   "EXTRA_LEFS": [
     "dir::./src/macros/sky130_sram_1kbyte_1rw1r_32x256_8.lef"
   ],
