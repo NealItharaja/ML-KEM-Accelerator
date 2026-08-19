@@ -38,11 +38,13 @@
 
   "CLOCK_PERIOD": 50.0,
 
-  "FP_SIZING": "relative",
+  "FP_SIZING": "absolute",
 
-  "FP_CORE_UTIL": 35,
+  "DIE_AREA": [0, 0, 4950, 4950],
 
-  "FP_ASPECT_RATIO": 1,
+  "CORE_AREA": [10, 10, 4490, 4490],
+
+  "PL_TARGET_DENSITY_PCT": 50,
 
   "PDN_MULTILAYER": true,
 
@@ -52,9 +54,9 @@
 
   "SYNTH_STRATEGY": "AREA 0",
 
-  "SYNTH_HIERARCHY_MODE": "flatten",
+  "SYNTH_NO_FLAT": true,
 
-  "RUN_HEURISTIC_DIODE_INSERTION": false,
+  "RUN_HEURISTIC_DIODE_INSERTION": true,
 
   "RUN_ANTENNA_REPAIR": true,
 
