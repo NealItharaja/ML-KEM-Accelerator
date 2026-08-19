@@ -28,11 +28,11 @@ module kem #(
     localparam integer SK_LEN = SK_PKE + PK_LEN + 64;
     localparam integer CT_LEN = 32 * DU * K + 32 * DV;
     localparam integer U_BYTES = 32 * DU;
-    localparam integer PK_BASE  = 0;
-    localparam integer SK_BASE  = PK_BASE  + PK_LEN;
-    localparam integer CT_BASE  = SK_BASE  + SK_LEN;
-    localparam integer CT2_BASE = CT_BASE  + CT_LEN;
-    localparam integer BM_LEN   = CT2_BASE + CT_LEN;
+    localparam integer PK_BASE = 0;
+    localparam integer SK_BASE = PK_BASE + PK_LEN;
+    localparam integer CT_BASE = SK_BASE + SK_LEN;
+    localparam integer CT2_BASE = CT_BASE + CT_LEN;
+    localparam integer BM_LEN = CT2_BASE + CT_LEN;
     localparam integer NSLOTS = 3*K + 4;
     localparam integer S0 = 0;
     localparam integer E0 = K;
